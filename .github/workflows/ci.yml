@@ -92,7 +92,10 @@ jobs:
       # Only Chromium — the suite pins that project, and pulling all three
       # browsers roughly triples install time for no extra coverage.
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        # WebKit, not Chromium: the e2e suite drives Playwright's iPhone 13
+        # descriptor, which defaults to WebKit — the engine every guest will
+        # actually be using on the night.
+        run: npx playwright install --with-deps webkit
 
       - name: Run E2E
         run: npm run test:e2e

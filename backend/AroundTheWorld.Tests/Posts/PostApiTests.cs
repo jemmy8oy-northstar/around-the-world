@@ -97,7 +97,7 @@ public class PostApiTests
         using var factory = new GameApiFactory();
         var client = await JoinAsync(factory, "Dave");
 
-        factory.Clock.SetUtcNow(new DateTimeOffset(2026, 8, 27, 5, 0, 0, TimeSpan.Zero));
+        factory.Clock.SetUtcNow(new DateTimeOffset(2026, 8, 29, 5, 0, 0, TimeSpan.Zero));
 
         var response = await client.PostAsync("/api/posts", Drink());
 

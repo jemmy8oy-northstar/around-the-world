@@ -6,7 +6,7 @@ the drink is from. The group gets a shared chronological feed and a world map
 that fills up as the night goes on.
 
 **Live:** `balenthiran.co.uk/birthday` · **Party code:** `260802`
-**Go live:** 26 Aug 2026, 17:00 BST · **Read-only:** 27 Aug 2026, 05:00 BST
+**Go live:** 28 Aug 2026, 17:00 BST · **Read-only:** 29 Aug 2026, 05:00 BST
 
 ---
 

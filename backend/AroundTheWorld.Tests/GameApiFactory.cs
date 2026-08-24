@@ -37,7 +37,7 @@ public sealed class GameApiFactory : WebApplicationFactory<Program>
         DateTimeOffset? startAt = null)
     {
         this.configureServices = configureServices;
-        Clock = new FakeTimeProvider(startAt ?? new DateTimeOffset(2026, 8, 26, 20, 0, 0, TimeSpan.Zero));
+        Clock = new FakeTimeProvider(startAt ?? new DateTimeOffset(2026, 8, 28, 20, 0, 0, TimeSpan.Zero));
     }
 
     /// <summary>

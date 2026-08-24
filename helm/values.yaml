@@ -33,6 +33,60 @@ apps:
     nodeSelector: {}
     tolerations: []
     affinity: {}
+    env:
+      # The ingress routes /birthday/api here without stripping the prefix, so
+      # the app has to know it is hosted under one. See WebApi/Program.cs.
+      - name: PathBase
+        value: "/birthday"
+      - name: ASPNETCORE_ENVIRONMENT
+        value: "Production"
+
+      # Non-secret object-storage settings. The bucket name and endpoint are not
+      # credentials; only the key pair below is.
+      - name: PhotoStorage__Bucket
+        value: "around-the-world"
+      - name: PhotoStorage__Region
+        value: "uk-london-1"
+      # e.g. https://{namespace}.compat.objectstorage.uk-london-1.oraclecloud.com
+      - name: PhotoStorage__ServiceUrl
+        value: ""
+      # Public bucket URL. Leave empty to proxy photos through the API instead —
+      # which is what a private bucket needs.
+      - name: PhotoStorage__PublicBaseUrl
+        value: ""
+
+      # Secrets. Create with:
+      #   kubectl create secret generic around-the-world-secrets \
+      #     --from-literal=ConnectionStrings__DefaultConnection='Host=...;Database=...;Username=...;Password=...' \
+      #     --from-literal=Jwt__Secret="$(openssl rand -hex 32)" \
+      #     --from-literal=Admin__Key="$(openssl rand -hex 16)" \
+      #     --from-literal=PhotoStorage__AccessKeyId='...' \
+      #     --from-literal=PhotoStorage__SecretAccessKey='...'
+      - name: ConnectionStrings__DefaultConnection
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: ConnectionStrings__DefaultConnection
+      - name: Jwt__Secret
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: Jwt__Secret
+      - name: Admin__Key
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: Admin__Key
+      - name: PhotoStorage__AccessKeyId
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: PhotoStorage__AccessKeyId
+      - name: PhotoStorage__SecretAccessKey
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: PhotoStorage__SecretAccessKey
 
   - name: frontend
     image:
@@ -52,10 +106,6 @@ apps:
     tolerations: []
     affinity: {}
 
-# App-specific secrets — add per project (none pre-scaffolded):
-# env:
-#   - name: MY_API_KEY
-#     valueFrom:
-#       secretKeyRef:
-#         name: {{ .Values.fullnameOverride }}-secrets
-#         key: MY_API_KEY
+# Secrets live in the `around-the-world-secrets` Secret in the target namespace.
+# See the backend app's env block above for the exact kubectl command, and
+# README.md for the OCI Object Storage bucket setup.

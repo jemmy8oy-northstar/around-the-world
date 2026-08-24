@@ -90,7 +90,28 @@ fallback so local dev and CI need no OCI credentials.
 | Photo storage | #4 | #14 | Raised — 105 tests green |
 | Posts, aggregation, admin | #5 | #15 | Raised — 142 tests green |
 | Frontend (shell, feed, map, board, admin) | #6–#9 | #16 | Raised — 52 unit + 16 e2e green |
-| Deployment config | #10 | — | Next |
+| Deployment config | #10 | #17 | Raised |
+
+### Deployment findings
+
+- **The template's subpath deployment does not work for the backend.** The
+  ingress routes `/{app}/api` to the service *without* rewriting the prefix
+  away, so ASP.NET — whose routes are `/api/...` — 404s on every request. The
+  frontend half works because its nginx serves from a matching subdirectory;
+  the backend half has no equivalent. Fixed with a configurable `PathBase`
+  applied before routing. **This is the textbook "works on localhost, 404s in
+  the cluster" failure and it would have bitten on the night. → template fix
+  needed.**
+- Consequently the frontend must call `/birthday/api/...`, not `/api/...`. The
+  RTK base URL is now `import.meta.env.BASE_URL` and the Vite dev proxy strips
+  the prefix, so dev and cluster agree.
+- **The Helm chart could not express an empty-string env var.** `{{- if .value }}`
+  tests truthiness, so `value: ""` (a legitimately unset optional endpoint)
+  rendered as a name with no value at all. Changed to `hasKey`. **→ template fix
+  needed.**
+- Docs corrected in place, per the standing rule: the SCSS/Vitest claims, the
+  `gh repo view --json owner` assignee rule (returns the org, which cannot be
+  assigned), and the localhost port.
 
 ### Frontend findings
 

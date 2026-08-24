@@ -2,11 +2,7 @@ import React from "react";
 import "./Badge.css";
 
 export type BadgeVariant =
-  | "neutral"
-  | "accent"
-  | "success"
-  | "warning"
-  | "danger";
+  "neutral" | "accent" | "success" | "warning" | "danger";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** Colour role. Defaults to 'neutral'. */

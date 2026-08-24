@@ -15,17 +15,20 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': {
+      // The client calls /birthday/api/... because that is what works in the
+      // cluster. Locally the backend has no PathBase, so strip the prefix here.
+      '/birthday/api': {
         target: 'http://localhost:5257',
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path.replace(/^\/birthday/, ''),
       },
       '/openapi': {
         target: 'http://localhost:5257',
         changeOrigin: true,
         secure: false,
-      }
-    }
+      },
+    },
   },
   test: {
     // e2e/ is Playwright's; Vitest would try to run those specs and fail on

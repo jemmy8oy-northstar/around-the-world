@@ -29,7 +29,10 @@ spec:
           env:
             {{- range .env }}
             - name: {{ .name }}
-              {{- if .value }}
+              {{- /* hasKey, not truthiness: `value: ""` is a legitimate setting
+                     (an unset optional endpoint), and testing `.value` emitted a
+                     name with no value at all for it. */}}
+              {{- if hasKey . "value" }}
               value: {{ .value | quote }}
               {{- else if .valueFrom }}
               valueFrom:

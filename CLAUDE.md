@@ -25,12 +25,12 @@ A `dotnet new` monorepo template for .NET 10 + React 19 projects. Every new proj
 ├── frontend/                      # React + TypeScript Vite app
 │   └── src/
 │       ├── api/                   # RTK Query: emptyApi, generatedApi (codegen), custom endpoints
-│       ├── components/            # Reusable UI components (each with co-located .scss)
+│       ├── components/            # Reusable UI components (each with co-located .css)
 │       ├── context/               # React context for UI state
 │       ├── data/                  # config.json and static JSON
 │       ├── pages/                 # Route-level page components
 │       ├── store/                 # Redux store
-│       └── styles/                # Global SCSS: design tokens, resets, utilities
+│       └── styles/                # Global CSS: design tokens, resets, utilities
 ├── scripts/init.mjs               # First-run onboarding: generates appsettings + .env
 ├── scripts/init-issues.mjs        # Scaffolds initial SDD issues on GitHub
 ├── helm/                          # Helm chart for Kubernetes deployment
@@ -77,12 +77,13 @@ A `dotnet new` monorepo template for .NET 10 + React 19 projects. Every new proj
 
 ```bash
 # Backend (Terminal 1)
-cd backend && dotnet run --project AroundTheWorld.WebApi
-# API: http://localhost:5000  |  Docs: http://localhost:5000/scalar/v1
+cd backend && ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5257 \
+  dotnet run --project AroundTheWorld.WebApi --no-launch-profile
+# API: http://localhost:5257  |  Docs: http://localhost:5257/scalar/v1
 
 # Frontend (Terminal 2)
 cd frontend && npm run dev
-# App: http://localhost:5173
+# App: http://localhost:5173/birthday/   (the /birthday base is deliberate)
 
 # Regenerate API client after backend changes (refresh schema, then codegen — no server needed)
 cd backend && dotnet build AroundTheWorld.WebApi -c Debug   # refreshes committed openapi.json
@@ -131,6 +132,7 @@ Always assign the repository owner to every issue and PR:
 - `gh issue create ... --assignee $(gh repo view --json owner --jq .owner.login)`
 - `gh pr create   ... --assignee $(gh repo view --json owner --jq .owner.login)`
 - Finding owner: Use `gh repo view --json owner --jq .owner.login`. Cache it — don't call multiple times.
+- ⚠️ **This repo is org-owned**, so that command returns `jemmy8oy-northstar` — an org cannot be an assignee and `--assignee` will fail with it. Assign **`jemmy8oy`** here.
 - Verification: After creating issues/PRs, run `gh issue view <N> --json assignees` to confirm.
 
 ## Assumptions & Decisions (mandatory for all AI-raised PRs)

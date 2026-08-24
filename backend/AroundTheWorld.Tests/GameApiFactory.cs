@@ -36,6 +36,11 @@ public sealed class GameApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
 
+        // The Testing environment deliberately skips appsettings.Development.json,
+        // so the signing key has to be supplied here or every booted host would
+        // mint its own ephemeral one and tokens would not verify.
+        builder.UseSetting("Jwt:Secret", "test-signing-key-that-is-long-enough-for-hmac-sha256");
+
         builder.ConfigureServices(services =>
         {
             services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));

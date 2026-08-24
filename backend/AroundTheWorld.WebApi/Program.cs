@@ -59,9 +59,13 @@ if (!generatingOpenApiDocument)
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGroup("/api")
     .MapStatusRoutes()
     .MapGameRoutes()
+    .MapAuthRoutes()
     .WithOpenApi();
 
 app.Run();

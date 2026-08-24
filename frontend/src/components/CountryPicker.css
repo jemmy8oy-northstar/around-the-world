@@ -1,0 +1,66 @@
+.picker__search {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-primary);
+
+  /* 16px minimum stops iOS Safari zooming the page on focus. */
+  font-size: 1rem;
+  margin-bottom: var(--space-3);
+}
+
+.picker__search:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
+.picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  /* Caps the list so the caption field and submit button stay reachable. */
+  max-height: 14rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.picker__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--glass-border);
+  padding: var(--space-3) var(--space-4);
+
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  min-height: 2.75rem;
+}
+
+.picker__option--selected {
+  background: var(--accent-soft);
+  color: var(--accent-fg);
+  font-weight: var(--weight-semibold);
+}
+
+.picker__flag {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.picker__none {
+  padding: var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

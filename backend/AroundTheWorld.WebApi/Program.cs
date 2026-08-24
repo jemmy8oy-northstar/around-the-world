@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Scalar.AspNetCore;
 using AroundTheWorld.WebApi;
 using AroundTheWorld.WebApi.ExceptionHandling;
@@ -8,6 +9,19 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddBackendServices(builder.Configuration);
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    // Enums on the wire as names, not ordinals: the generated TypeScript client
+    // gets a "Practice" | "Live" | "Finished" union instead of a bare number, so
+    // the frontend branches on meaning rather than on a magic 2.
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+    // .NET 10 describes int32 as ["integer","string"] by default, because it will
+    // happily read a number from a JSON string. That union propagates into every
+    // integer field of the generated client. We never send numbers as strings.
+    options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 

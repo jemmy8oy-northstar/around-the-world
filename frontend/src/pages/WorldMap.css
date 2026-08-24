@@ -1,0 +1,22 @@
+.worldmap-page {
+  /* Centres the map in whatever height is left between the banner and the tab
+     bar. A world map is inherently wide, so on a portrait phone it can never
+     fill the viewport — top-aligning it just left a large void underneath. */
+  min-height: calc(100dvh - 12rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.worldmap-page__canvas {
+  padding: 0 var(--space-2);
+}
+
+.worldmap-page__hint {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  padding: 0 var(--space-5);
+  margin: 0;
+}

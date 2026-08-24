@@ -1,5 +1,8 @@
 using AroundTheWorld.Abstractions.Services;
+using AroundTheWorld.Abstractions.Services.Auth;
 using AroundTheWorld.Services;
+using AroundTheWorld.Services.Auth;
+using AroundTheWorld.WebApi.Authentication;
 using AroundTheWorld.Services.Configuration;
 using AroundTheWorld.Database;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +25,9 @@ public static class ServiceRegistration
         }
 
         services.Configure<GameOptions>(configuration.GetSection(GameOptions.SectionName));
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+
+        services.AddJwtAuthentication(configuration);
 
         services.AddAutoMapper(cfg => cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
 
@@ -29,5 +35,14 @@ public static class ServiceRegistration
         services.AddScoped<IStatusService, StatusService>();
         services.AddScoped<IGameService, GameService>();
         services.AddScoped<IGameBootstrapper, GameBootstrapper>();
+
+        // Auth
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IPartyCodeValidator, PartyCodeValidator>();
+        services.AddScoped<IUsernameClaimService, UsernameClaimService>();
+        services.AddScoped<ISessionIssuer, SessionIssuer>();
+        services.AddScoped<IRefreshTokenRedeemer, RefreshTokenRedeemer>();
+        services.AddScoped<IAccessTokenIssuer, AccessTokenIssuer>();
+        services.AddSingleton<IRefreshTokenFactory, RefreshTokenFactory>();
     }
 }

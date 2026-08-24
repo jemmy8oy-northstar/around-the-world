@@ -13,5 +13,10 @@ public class Mapper : Profile
     public Mapper()
     {
         CreateMap<DomainGameState, GameState>();
+
+        // Drops IsShadowBanned by construction — the wire model has no such field,
+        // which is exactly how a shadow ban stays invisible to the person banned.
+        CreateMap<DomainAuthSession, AuthSession>();
+        CreateMap<DomainUser, User>();
     }
 }

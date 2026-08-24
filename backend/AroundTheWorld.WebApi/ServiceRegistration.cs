@@ -1,5 +1,6 @@
 using AroundTheWorld.Abstractions.Services;
 using AroundTheWorld.Services;
+using AroundTheWorld.Services.Configuration;
 using AroundTheWorld.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +21,13 @@ public static class ServiceRegistration
                 options.UseNpgsql(connectionString, b => b.MigrationsAssembly("AroundTheWorld.Database")));
         }
 
+        services.Configure<GameOptions>(configuration.GetSection(GameOptions.SectionName));
+
         services.AddAutoMapper(cfg => cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies()));
+
+        services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<IStatusService, StatusService>();
+        services.AddScoped<IGameService, GameService>();
+        services.AddScoped<IGameBootstrapper, GameBootstrapper>();
     }
 }

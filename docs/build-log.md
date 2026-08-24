@@ -88,4 +88,26 @@ fallback so local dev and CI need no OCI credentials.
 | Schema, rounds, game state | #2 | #12 | Raised — 49 tests green |
 | Auth | #3 | #13 | Raised — 73 tests green |
 | Photo storage | #4 | #14 | Raised — 105 tests green |
-| Posts, aggregation, admin | #5 | — | Next |
+| Posts, aggregation, admin | #5 | #15 | Raised — 142 tests green |
+| Frontend | #6–#9 | — | Next |
+
+### Late findings (posts/admin slice)
+
+- **A bespoke `IClock` was the wrong abstraction and the integration tests caught
+  it.** Tokens were issued on the injected clock but validated by the JWT bearer
+  handler on the *system* clock, so every authenticated request 401'd with the
+  token "not yet valid". Replaced `IClock`/`SystemClock` with .NET's built-in
+  `TimeProvider` (and `FakeTimeProvider` in tests) — one clock, shared by the app
+  and the auth handler. **→ the template should use `TimeProvider`, not roll its
+  own clock interface.**
+- **Setting `JwtBearerOptions.TimeProvider` is not sufficient.** The token
+  handler's lifetime check reads `DateTime.UtcNow` directly unless an explicit
+  `LifetimeValidator` is supplied. This is a genuine trap and cost the most time
+  in this slice.
+- **`FakeTimeProvider` refuses to move backwards**, so the test host takes its
+  start instant as a constructor argument rather than being rewound.
+- First attempt at releasing a username mangled `UsernameNormalised` to free the
+  unique index — which overflowed the 32-char column and would have shown up in
+  admin lists. Replaced with a `ReleasedAt` column and a **filtered** unique
+  index, so a released name is reclaimable while the user row (and their posts)
+  survive.

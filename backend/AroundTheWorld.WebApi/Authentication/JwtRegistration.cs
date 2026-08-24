@@ -37,8 +37,27 @@ public static class JwtRegistration
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.Secret)),
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.FromMinutes(1),
                 };
+            });
+
+        // Setting JwtBearerOptions.TimeProvider is not enough: the token handler's
+        // lifetime check reads DateTime.UtcNow directly unless an explicit
+        // LifetimeValidator is supplied. Without this a token issued on the app's
+        // clock can be rejected as "not yet valid" by a handler reading a different
+        // one — which is exactly what happened in the integration tests.
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<TimeProvider>((bearer, timeProvider) =>
+            {
+                bearer.TimeProvider = timeProvider;
+                bearer.TokenValidationParameters.LifetimeValidator =
+                    (notBefore, expires, _, _) =>
+                    {
+                        var now = timeProvider.GetUtcNow().UtcDateTime;
+                        var skew = TimeSpan.FromMinutes(1);
+
+                        return (notBefore is null || notBefore <= now + skew)
+                            && (expires is null || expires > now - skew);
+                    };
             });
 
         services.AddAuthorization();

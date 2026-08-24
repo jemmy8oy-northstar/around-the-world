@@ -67,6 +67,9 @@ app.MapGroup("/api")
     .MapGameRoutes()
     .MapAuthRoutes()
     .MapPhotoRoutes()
+    .MapPostRoutes()
+    .MapCountryRoutes()
+    .MapAdminRoutes()
     .WithOpenApi();
 
 app.Run();

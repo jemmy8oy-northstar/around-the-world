@@ -27,7 +27,7 @@ apps:
       port: 80
       targetPort: 8080
     ingress:
-      path: /around-the-world/api     # developer replaces 'around-the-world' at scaffold time
+      path: /birthday/api
       pathType: Prefix
     resources: {}
     nodeSelector: {}
@@ -45,7 +45,7 @@ apps:
       port: 80
       targetPort: 80
     ingress:
-      path: /around-the-world         # developer replaces 'around-the-world' at scaffold time
+      path: /birthday
       pathType: Prefix
     resources: {}
     nodeSelector: {}

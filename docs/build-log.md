@@ -87,4 +87,5 @@ fallback so local dev and CI need no OCI credentials.
 | Spec + `/birthday` ingress | #1 | #11 | Raised |
 | Schema, rounds, game state | #2 | #12 | Raised — 49 tests green |
 | Auth | #3 | #13 | Raised — 73 tests green |
-| Photo storage | #4 | — | Next |
+| Photo storage | #4 | #14 | Raised — 105 tests green |
+| Posts, aggregation, admin | #5 | — | Next |

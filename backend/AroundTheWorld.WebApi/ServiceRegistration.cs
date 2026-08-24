@@ -3,6 +3,7 @@ using AroundTheWorld.Abstractions.Services.Auth;
 using AroundTheWorld.Services;
 using AroundTheWorld.Services.Auth;
 using AroundTheWorld.WebApi.Authentication;
+using AroundTheWorld.WebApi.Photos;
 using AroundTheWorld.Services.Configuration;
 using AroundTheWorld.Database;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,9 @@ public static class ServiceRegistration
 
         services.Configure<GameOptions>(configuration.GetSection(GameOptions.SectionName));
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<PhotoStorageOptions>(configuration.GetSection(PhotoStorageOptions.SectionName));
+
+        services.AddPhotoStorage(configuration);
 
         services.AddJwtAuthentication(configuration);
 

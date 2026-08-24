@@ -345,11 +345,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "pattern": "^-?(?:0|[1-9]\\d*)$",
-                  "type": [
-                    "integer",
-                    "string"
-                  ],
+                  "type": "integer",
                   "format": "int32"
                 }
               }
@@ -380,11 +376,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "pattern": "^-?(?:0|[1-9]\\d*)$",
-                  "type": [
-                    "integer",
-                    "string"
-                  ],
+                  "type": "integer",
                   "format": "int32"
                 }
               }
@@ -536,17 +528,17 @@
             "type": "string"
           },
           "postCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           }
         }
       },
       "GameMode": {
-        "type": "integer"
+        "enum": [
+          "Practice",
+          "Live",
+          "Finished"
+        ]
       },
       "GameState": {
         "required": [
@@ -558,22 +550,14 @@
             "$ref": "#/components/schemas/GameMode"
           },
           "roundId": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "roundName": {
             "type": "string"
           },
           "currentStopNumber": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "goLiveAt": {
@@ -635,11 +619,7 @@
             "type": "string"
           },
           "stopNumber": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
+            "type": "integer",
             "format": "int32"
           },
           "createdAt": {
@@ -664,11 +644,9 @@
             ]
           },
           "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
-              "integer",
-              "string"
+              "integer"
             ],
             "format": "int32"
           },

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using AroundTheWorld.Tests.Auth;
 using AroundTheWorld.Tests.Posts;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,11 @@ namespace AroundTheWorld.Tests.Admin;
 /// </summary>
 public class AdminApiTests
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        // The API sends enum names, not ordinals — see ConfigureHttpJsonOptions.
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     private static async Task<HttpClient> JoinAsync(GameApiFactory factory, string username)
     {

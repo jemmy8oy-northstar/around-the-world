@@ -89,7 +89,53 @@ fallback so local dev and CI need no OCI credentials.
 | Auth | #3 | #13 | Raised — 73 tests green |
 | Photo storage | #4 | #14 | Raised — 105 tests green |
 | Posts, aggregation, admin | #5 | #15 | Raised — 142 tests green |
-| Frontend | #6–#9 | — | Next |
+| Frontend (shell, feed, map, board, admin) | #6–#9 | #16 | Raised — 52 unit + 16 e2e green |
+| Deployment config | #10 | — | Next |
+
+### Frontend findings
+
+- **Screenshots caught three bugs that typechecking, unit tests and e2e all
+  passed straight over.** Worth stating plainly, because it changes how to work:
+  every one of these was a *rendered layout* problem, invisible to any assertion
+  that was not a picture.
+  1. The bottom tab bar rendered at **351px of a 390px viewport**. Cause: the
+     template's `index.css` carries `nav { width: 90% !important }` inside a
+     `max-width: 768px` media query, written for its own marketing Navbar — and
+     it matched this app's `<nav>` tab bar. Element selectors plus `!important`
+     in a global stylesheet do not survive a second component. Fixed by deleting
+     the marketing CSS this project never used. **→ template fix needed.**
+  2. Capping an `aspect-ratio` box with `max-height` makes it shrink its
+     **width** to preserve the ratio, leaving a dead band down the side of every
+     feed card. Replaced with an explicit height plus `object-fit: cover`.
+  3. The composer's full-width 4:5 capture area pushed the country picker and
+     the Post button below the fold — the core action of the whole app needed a
+     scroll on every phone.
+- **Diagnosing by probe beat guessing.** For each of the above I ran a scripted
+  Playwright evaluation dumping bounding boxes and computed styles rather than
+  squinting at the image. The tab-bar width in particular looked like a
+  containing-block problem and was not.
+- **The seeded test photos mattered.** The first screenshot pass used a
+  336-byte 100×100 grey JPEG, which made the feed impossible to judge.
+  Generating plausible portrait drink images made the real layout problems
+  obvious immediately.
+- **`FakeTimeProvider` refuses to move backwards**, so the test host takes its
+  start instant as a constructor argument rather than being rewound.
+- **The e2e suite runs on WebKit**, not Chromium — Playwright's iPhone 13
+  descriptor defaults to it, which is right, because every guest on the night
+  will be on mobile Safari.
+- **Two OpenAPI contract fixes worth taking back to the template.** .NET 10
+  describes `int32` as `["integer","string"]` by default (it will read a number
+  from a JSON string), and that union propagates into every integer field of the
+  generated TypeScript client. Setting `NumberHandling = Strict` plus
+  `JsonStringEnumConverter` turned `GameMode` from a bare `number` into a
+  `"Practice" | "Live" | "Finished"` union and every int into `number`.
+- **The generated client cannot express multipart.** It hands its `body` object
+  to `fetchBaseQuery`, which JSON-serialises it — the photo would have arrived
+  as `{}`. The upload endpoint is hand-written in `customApi.ts`, which is what
+  `.agents/rules/project.md` already prescribes for exactly this case.
+- **Refresh needs a mutex.** Refresh tokens are single-use server-side, so a
+  screen firing three queries at once on an expired token would burn three and
+  log the user out. Fifteen lines, no dependency.
 
 ### Late findings (posts/admin slice)
 

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
 /**
  * The favicon has to be *served*, not merely declared.
@@ -14,10 +14,16 @@ import { expect, test } from '@playwright/test';
  * whatever href the app actually publishes and fetches it the way a browser
  * would, which also covers getting `base` wrong.
  */
-test('the declared favicon is served, not just declared', async ({ page, request }) => {
-  await page.goto('./');
+test("the declared favicon is served, not just declared", async ({
+  page,
+  request,
+}) => {
+  await page.goto("./");
 
-  const href = await page.locator('link[rel="icon"]').first().getAttribute('href');
+  const href = await page
+    .locator('link[rel="icon"]')
+    .first()
+    .getAttribute("href");
 
   // Assert the premise before the conclusion: no icon link (or an empty href)
   // must fail here rather than silently skipping the fetch below.
@@ -37,7 +43,7 @@ test('the declared favicon is served, not just declared', async ({ page, request
   // still returns 200 — with an HTML body a browser cannot use as an icon.
   // The content type is what distinguishes "served" from "swallowed".
   expect(
-    response.headers()['content-type'] ?? '',
+    response.headers()["content-type"] ?? "",
     `favicon ${resolved} returned 200 but is not an image — the dev server fell back to index.html, which means the file is missing from frontend/public/`,
   ).toMatch(/^image\//);
 });

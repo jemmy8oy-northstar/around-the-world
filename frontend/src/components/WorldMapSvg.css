@@ -1,0 +1,44 @@
+.worldmap {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.worldmap__land path {
+  /* Land needs to read as land against a near-black page — the 8%-white glass
+     fill left continents almost indistinguishable from the sea. */
+  fill: color-mix(in srgb, var(--text-primary) 14%, transparent);
+  stroke: color-mix(in srgb, var(--text-primary) 26%, transparent);
+  stroke-width: 0.5;
+
+  /* Avoids hairline seams between adjacent countries on high-DPI screens. */
+  vector-effect: non-scaling-stroke;
+}
+
+.worldmap__badge {
+  cursor: pointer;
+}
+
+.worldmap__hit {
+  fill: transparent;
+}
+
+.worldmap__badge-circle {
+  fill: var(--accent-primary);
+  stroke: var(--bg-page);
+  stroke-width: 2;
+}
+
+.worldmap__badge-text {
+  fill: var(--accent-contrast);
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+
+  /* The number is decoration on top of the tap target, not a separate one. */
+  pointer-events: none;
+}
+
+.worldmap__badge:focus-visible .worldmap__badge-circle {
+  outline: var(--focus-ring);
+}

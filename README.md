@@ -74,7 +74,7 @@ cd backend && dotnet ef database update \
 ```
 
 The first run seeds the settings row and Round 1 automatically — party code
-`260802`, go-live 26 Aug 2026 17:00 BST, read-only 27 Aug 05:00 BST.
+`260802`, go-live 28 Aug 2026 17:00 BST, read-only 29 Aug 05:00 BST.
 
 ### 2. Run
 

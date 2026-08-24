@@ -85,8 +85,8 @@ export async function mockApi(
         roundId: 1,
         roundName: "Round 1",
         currentStopNumber: 2,
-        goLiveAt: "2026-08-26T16:00:00Z",
-        readOnlyAt: "2026-08-27T04:00:00Z",
+        goLiveAt: "2026-08-28T16:00:00Z",
+        readOnlyAt: "2026-08-29T04:00:00Z",
       },
     }),
   );

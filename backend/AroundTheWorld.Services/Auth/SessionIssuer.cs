@@ -14,7 +14,7 @@ public class SessionIssuer(
     IAccessTokenIssuer accessTokenIssuer,
     IRefreshTokenFactory refreshTokenFactory,
     IOptions<JwtOptions> options,
-    IClock clock) : ISessionIssuer
+    TimeProvider timeProvider) : ISessionIssuer
 {
     public async Task<IDomainAuthSession> IssueAsync(IDomainUser user, CancellationToken cancellationToken = default)
     {
@@ -26,8 +26,8 @@ public class SessionIssuer(
             Id = Guid.NewGuid(),
             UserId = user.Id,
             RefreshTokenHash = refreshTokenFactory.Hash(refreshToken),
-            CreatedAt = clock.UtcNow,
-            ExpiresAt = clock.UtcNow.AddDays(options.Value.RefreshTokenDays),
+            CreatedAt = timeProvider.GetUtcNow().UtcDateTime,
+            ExpiresAt = timeProvider.GetUtcNow().UtcDateTime.AddDays(options.Value.RefreshTokenDays),
         });
 
         await dbContext.SaveChangesAsync(cancellationToken);

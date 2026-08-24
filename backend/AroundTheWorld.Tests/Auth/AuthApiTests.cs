@@ -142,7 +142,7 @@ public class AuthApiTests
         var joined = await (await client.PostAsJsonAsync("/api/auth/join", Join()))
             .Content.ReadFromJsonAsync<AuthSessionResponse>(Json);
 
-        factory.Clock.UtcNow = factory.Clock.UtcNow.AddDays(91);
+        factory.Clock.Advance(TimeSpan.FromDays(91));
 
         var response = await client.PostAsJsonAsync(
             "/api/auth/refresh", new { refreshToken = joined!.RefreshToken });

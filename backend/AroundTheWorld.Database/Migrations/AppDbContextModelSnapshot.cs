@@ -174,6 +174,9 @@ namespace AroundTheWorld.Database.Migrations
                     b.Property<bool>("IsShadowBanned")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -187,7 +190,8 @@ namespace AroundTheWorld.Database.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UsernameNormalised")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"ReleasedAt\" IS NULL");
 
                     b.ToTable("Users");
                 });

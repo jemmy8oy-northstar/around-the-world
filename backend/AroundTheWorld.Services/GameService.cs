@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AroundTheWorld.Services;
 
-public class GameService(AppDbContext dbContext, IClock clock) : IGameService
+public class GameService(AppDbContext dbContext, TimeProvider timeProvider) : IGameService
 {
     public async Task<IDomainGameState> GetStateAsync(CancellationToken cancellationToken = default)
     {
@@ -30,7 +30,7 @@ public class GameService(AppDbContext dbContext, IClock clock) : IGameService
             ReadOnlyAt = settings.ReadOnlyAt,
         };
 
-        state.Mode = state.ResolveMode(clock.UtcNow);
+        state.Mode = state.ResolveMode(timeProvider.GetUtcNow().UtcDateTime);
         return state;
     }
 }

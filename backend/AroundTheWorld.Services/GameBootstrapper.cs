@@ -10,7 +10,7 @@ namespace AroundTheWorld.Services;
 public class GameBootstrapper(
     AppDbContext dbContext,
     IOptions<GameOptions> options,
-    IClock clock) : IGameBootstrapper
+    TimeProvider timeProvider) : IGameBootstrapper
 {
     public async Task EnsureInitialisedAsync(CancellationToken cancellationToken = default)
     {
@@ -27,7 +27,7 @@ public class GameBootstrapper(
         {
             Name = settings.FirstRoundName,
             CurrentStopNumber = 1,
-            StartedAt = clock.UtcNow,
+            StartedAt = timeProvider.GetUtcNow().UtcDateTime,
         };
 
         dbContext.Rounds.Add(round);

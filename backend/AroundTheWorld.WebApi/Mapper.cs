@@ -18,5 +18,10 @@ public class Mapper : Profile
         // which is exactly how a shadow ban stays invisible to the person banned.
         CreateMap<DomainAuthSession, AuthSession>();
         CreateMap<DomainUser, User>();
+
+        // AuthorIsShadowBanned has no counterpart on Post, so it is dropped here
+        // by construction rather than by remembering to exclude it.
+        CreateMap<DomainPost, Post>();
+        CreateMap<DomainCountryTally, CountryTally>();
     }
 }

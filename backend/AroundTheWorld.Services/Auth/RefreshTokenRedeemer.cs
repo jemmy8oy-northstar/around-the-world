@@ -11,7 +11,7 @@ namespace AroundTheWorld.Services.Auth;
 public class RefreshTokenRedeemer(
     AppDbContext dbContext,
     IRefreshTokenFactory refreshTokenFactory,
-    IClock clock) : IRefreshTokenRedeemer
+    TimeProvider timeProvider) : IRefreshTokenRedeemer
 {
     public async Task<IDomainUser> RedeemAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
@@ -28,14 +28,14 @@ public class RefreshTokenRedeemer(
 
         // One message for unknown, revoked and expired alike — a caller probing
         // tokens learns nothing from the response about which it was.
-        if (session?.User is null || session.RevokedAt is not null || session.ExpiresAt <= clock.UtcNow)
+        if (session?.User is null || session.RevokedAt is not null || session.ExpiresAt <= timeProvider.GetUtcNow().UtcDateTime)
         {
             throw new UnauthorizedException("Your session has expired — join again.");
         }
 
         // Single-use: revoked as it is consumed, so a token captured in transit is
         // worthless the moment the real device refreshes.
-        session.RevokedAt = clock.UtcNow;
+        session.RevokedAt = timeProvider.GetUtcNow().UtcDateTime;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new DomainUser

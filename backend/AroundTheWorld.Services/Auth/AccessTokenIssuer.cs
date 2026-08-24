@@ -11,12 +11,12 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace AroundTheWorld.Services.Auth;
 
-public class AccessTokenIssuer(IOptions<JwtOptions> options, IClock clock) : IAccessTokenIssuer
+public class AccessTokenIssuer(IOptions<JwtOptions> options, TimeProvider timeProvider) : IAccessTokenIssuer
 {
     public IDomainAccessToken Issue(IDomainUser user)
     {
         var settings = options.Value;
-        var expiresAt = clock.UtcNow.AddHours(settings.AccessTokenHours);
+        var expiresAt = timeProvider.GetUtcNow().UtcDateTime.AddHours(settings.AccessTokenHours);
 
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Secret)),
@@ -34,7 +34,7 @@ public class AccessTokenIssuer(IOptions<JwtOptions> options, IClock clock) : IAc
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             ],
-            notBefore: clock.UtcNow,
+            notBefore: timeProvider.GetUtcNow().UtcDateTime,
             expires: expiresAt,
             signingCredentials: credentials);
 

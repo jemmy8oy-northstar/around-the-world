@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AroundTheWorld.Services.Auth;
 
-public partial class UsernameClaimService(AppDbContext dbContext, IClock clock) : IUsernameClaimService
+public partial class UsernameClaimService(AppDbContext dbContext, TimeProvider timeProvider) : IUsernameClaimService
 {
     private const int MinimumLength = 2;
     private const int MaximumLength = 32;
@@ -31,7 +31,10 @@ public partial class UsernameClaimService(AppDbContext dbContext, IClock clock) 
 
         var normalised = trimmed.ToLowerInvariant();
 
-        if (await dbContext.Users.AnyAsync(u => u.UsernameNormalised == normalised, cancellationToken))
+        var alreadyClaimed = await dbContext.Users.AnyAsync(
+            u => u.UsernameNormalised == normalised && u.ReleasedAt == null, cancellationToken);
+
+        if (alreadyClaimed)
         {
             // Deliberately not "log them in as that user": the feed's whole value is
             // that a post attributed to someone was made by them. An admin releases
@@ -44,7 +47,7 @@ public partial class UsernameClaimService(AppDbContext dbContext, IClock clock) 
             Id = Guid.NewGuid(),
             Username = trimmed,
             UsernameNormalised = normalised,
-            CreatedAt = clock.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().UtcDateTime,
         };
 
         dbContext.Users.Add(user);

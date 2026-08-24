@@ -53,9 +53,8 @@ public class GameApiTests
     [InlineData("2026-08-27T04:00:00Z", GameMode.Finished)]
     public async Task Get_game_reports_the_mode_for_the_current_instant(string instant, GameMode expected)
     {
-        using var factory = new GameApiFactory();
+        using var factory = new GameApiFactory(startAt: DateTimeOffset.Parse(instant).ToUniversalTime());
         var client = factory.CreateClient();
-        factory.Clock.UtcNow = DateTime.Parse(instant).ToUniversalTime();
 
         var state = await client.GetFromJsonAsync<GameStateResponse>("/api/game", Json);
 

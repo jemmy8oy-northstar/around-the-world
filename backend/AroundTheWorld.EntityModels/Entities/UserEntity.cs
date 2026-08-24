@@ -23,6 +23,13 @@ public class UserEntity
     /// </summary>
     public bool IsShadowBanned { get; set; }
 
+    /// <summary>
+    /// Set when an admin frees the name for someone else to claim — typically
+    /// because the original device died. The row is kept rather than deleted so
+    /// their existing posts stay attributed.
+    /// </summary>
+    public DateTime? ReleasedAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public ICollection<PostEntity> Posts { get; set; } = [];

@@ -48,7 +48,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             entity.Property(e => e.Username).HasMaxLength(32);
             entity.Property(e => e.UsernameNormalised).HasMaxLength(32);
-            entity.HasIndex(e => e.UsernameNormalised).IsUnique();
+            // Filtered so a released name becomes claimable again without having
+            // to delete the user row and orphan their posts.
+            entity.HasIndex(e => e.UsernameNormalised)
+                .IsUnique()
+                .HasFilter("\"ReleasedAt\" IS NULL");
         });
 
         modelBuilder.Entity<SessionEntity>(entity =>

@@ -13,7 +13,8 @@ public static class StatusRoutes
         group.MapGet("", async (IStatusService statusService) =>
         {
             var status = await statusService.GetSystemStatusAsync();
-            return Results.Ok(new {
+            return Results.Ok(new
+            {
                 version = status.Version,
                 friendlyStatus = status.GetFriendlyStatus(),
                 timestamp = status.LastUpdated

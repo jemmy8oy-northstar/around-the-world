@@ -2,6 +2,7 @@ using Scalar.AspNetCore;
 using AroundTheWorld.WebApi;
 using AroundTheWorld.WebApi.ExceptionHandling;
 using AroundTheWorld.WebApi.Routes;
+using AroundTheWorld.Abstractions.Services;
 using AroundTheWorld.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,15 +38,30 @@ if (!generatingOpenApiDocument)
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetService<AppDbContext>();
     if (dbContext is null)
+    {
         app.Logger.LogWarning("Skipping database migration — no connection string configured.");
+    }
     else
-        dbContext.Database.Migrate();
+    {
+        // The in-process integration tests swap in the InMemory provider, which
+        // cannot Migrate — see docs/specs/testing-strategy.md.
+        if (dbContext.Database.IsRelational())
+            dbContext.Database.Migrate();
+        else
+            dbContext.Database.EnsureCreated();
+
+        // A fresh database has no settings row and no round, so nothing is
+        // playable until this runs.
+        await scope.ServiceProvider.GetRequiredService<IGameBootstrapper>()
+            .EnsureInitialisedAsync();
+    }
 }
 
 app.UseHttpsRedirection();
 
 app.MapGroup("/api")
     .MapStatusRoutes()
+    .MapGameRoutes()
     .WithOpenApi();
 
 app.Run();

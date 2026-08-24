@@ -1,0 +1,27 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "AroundTheWorld.WebApi | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/status": {
+      "get": {
+        "tags": [
+          "AroundTheWorld.WebApi"
+        ],
+        "operationId": "GetStatus",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "AroundTheWorld.WebApi"
+    }
+  ]
+}

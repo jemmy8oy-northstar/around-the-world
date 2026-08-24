@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="AroundTheWorld.Abstractions/AroundTheWorld.Abstractions.csproj" />
+  <Project Path="AroundTheWorld.WebApi/AroundTheWorld.WebApi.csproj" />
+  <Project Path="AroundTheWorld.DataModels/AroundTheWorld.DataModels.csproj" />
+  <Project Path="AroundTheWorld.Database/AroundTheWorld.Database.csproj" />
+  <Project Path="AroundTheWorld.DomainModels/AroundTheWorld.DomainModels.csproj" />
+  <Project Path="AroundTheWorld.EntityModels/AroundTheWorld.EntityModels.csproj" />
+  <Project Path="AroundTheWorld.Services/AroundTheWorld.Services.csproj" />
+  <Project Path="AroundTheWorld.SourceGenerators/AroundTheWorld.SourceGenerators.csproj" />
+  <Project Path="AroundTheWorld.Tests/AroundTheWorld.Tests.csproj" />
+</Solution>

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../AroundTheWorld.Abstractions/AroundTheWorld.Abstractions.csproj" />
+    <ProjectReference Include="../AroundTheWorld.EntityModels/AroundTheWorld.EntityModels.csproj" />
+    <!-- Analyzer, not a runtime dependency: supplies [GenerateInterface].
+         Inert until a class here is marked with it. -->
+    <ProjectReference Include="../AroundTheWorld.SourceGenerators/AroundTheWorld.SourceGenerators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <EnableDefaultResourceItems>false</EnableDefaultResourceItems>    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

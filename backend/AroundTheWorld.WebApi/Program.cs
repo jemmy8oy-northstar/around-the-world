@@ -71,6 +71,15 @@ if (!generatingOpenApiDocument)
     }
 }
 
+// The ingress routes /birthday/api to this service WITHOUT rewriting the prefix
+// away, so without this every route 404s in the cluster while working perfectly
+// on localhost. Empty in development, set to "/birthday" by the Helm chart.
+var pathBase = builder.Configuration["PathBase"];
+if (!string.IsNullOrWhiteSpace(pathBase))
+{
+    app.UsePathBase(pathBase);
+}
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

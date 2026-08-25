@@ -53,6 +53,13 @@ const MUTATIONS = [
     file: "frontend/src/pages/adminTime.ts",
     find: "`${instant.getFullYear()}-${pad(instant.getMonth() + 1)}-${pad(instant.getDate())}` +",
     replace: "`${instant.getUTCFullYear()}-${pad(instant.getUTCMonth() + 1)}-${pad(instant.getUTCDate())}` +",
+    expect: "rolls the date over when the local time crosses midnight",
+  },
+  {
+    name: "the clock is filled from UTC rather than local parts",
+    file: "frontend/src/pages/adminTime.ts",
+    find: "`T${pad(instant.getHours())}:${pad(instant.getMinutes())}`",
+    replace: "`T${pad(instant.getUTCHours())}:${pad(instant.getUTCMinutes())}`",
     expect: "shows a 16:00Z cutover as 17:00, which is what BST calls it",
   },
   {

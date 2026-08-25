@@ -49,6 +49,16 @@ describe("toLocalInputValue, on a phone in the UK on the night", () => {
     );
   });
 
+  it("rolls the date over when the local time crosses midnight", () => {
+    // 23:30Z on the 28th is 00:30 on the 29th in London. The day and the clock
+    // have to come from the same side of the conversion — taking the date from
+    // UTC and the time from local shows the right minutes on the wrong day, and
+    // every other case in this file has them agreeing, so nothing else catches
+    // it. The read-only cutover is in the small hours, so this is the shape the
+    // real value has.
+    expect(toLocalInputValue("2026-08-28T23:30:00Z")).toBe("2026-08-29T00:30");
+  });
+
   it("is still correct outside BST, where the offset is zero", () => {
     // The control for every assertion above: if the code simply added an hour
     // somewhere, this is the one that would catch it.

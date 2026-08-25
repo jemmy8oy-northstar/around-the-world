@@ -116,9 +116,14 @@ cd frontend && npm run generate:countries                   # rebuilds src/data/
 
 ## Deployment
 
-Images are built by `.github/workflows/docker-build-push.yml`
-(`workflow_dispatch`), and the chart in `helm/` deploys both apps behind the
-shared `balenthiran.co.uk` ingress.
+Images are built by `.github/workflows/docker-build-push.yml`, which runs on
+every **push to `main`** as well as on `workflow_dispatch` — so promoting `dev`
+into `main` builds and pushes both images and pins their versions back into
+`helm/values.yaml`. The chart in `helm/` deploys both apps behind the shared
+`balenthiran.co.uk` ingress.
+
+> The comment block at the top of that workflow still claims it is "triggered
+> manually only". That is stale — read the `on:` block, not the prose above it.
 
 ### 1. Create the secret
 
@@ -151,8 +156,10 @@ are plain values in `helm/values.yaml`.
    `""` to have the API proxy them instead — both work.
 3. In the OCI console, under your user's **Customer Secret Keys**, generate an
    **S3 Compatibility API key**. That gives the access key / secret pair.
-4. Fill in `PhotoStorage__ServiceUrl` in `helm/values.yaml`:
-   `https://{namespace}.compat.objectstorage.uk-london-1.oraclecloud.com`
+4. `PhotoStorage__ServiceUrl` in `helm/values.yaml` is already set to
+   `https://lr7uc6l49odc.compat.objectstorage.uk-london-1.oraclecloud.com` —
+   the same tenancy namespace `registryPrefix` pushes images to. Change it only
+   if the bucket lives in a different tenancy.
 
 > `ForcePathStyle` is enabled in the S3 client because OCI's compatibility layer
 > does not support virtual-host style bucket addressing.

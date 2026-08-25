@@ -19,6 +19,14 @@ public class UserModerationService(AppDbContext dbContext, TimeProvider timeProv
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<string>> GetShadowBannedAsync(CancellationToken cancellationToken = default) =>
+        await dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.IsShadowBanned && u.ReleasedAt == null)
+            .OrderBy(u => u.UsernameNormalised)
+            .Select(u => u.Username)
+            .ToListAsync(cancellationToken);
+
     public async Task ReleaseUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
         var user = await FindAsync(username, cancellationToken);

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockApi, signIn } from "./mocks";
+import { mockApi, signIn, signInAsAdmin } from "./mocks";
 
 /**
  * Smoke + screenshot coverage for the whole app, driven off mocked API
@@ -195,8 +195,11 @@ test.describe("admin", () => {
     await expect(
       page.getByRole("button", { name: "🍺 Next pub" }),
     ).toBeVisible();
+    // The mocked game is Live, so the round reset sits behind the danger zone
+    // rather than next to the button used all night. This assertion used to
+    // name "Start a new round" directly.
     await expect(
-      page.getByRole("button", { name: "Start a new round" }),
+      page.getByRole("button", { name: "Danger zone" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Release name/ }),
@@ -208,11 +211,128 @@ test.describe("admin", () => {
     });
   });
 
-  test("is not linked from the tab bar", async ({ page }) => {
+  test("is not linked from the tab bar for an ordinary player", async ({
+    page,
+  }) => {
     await signIn(page);
     await page.goto("./");
 
     await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
     await expect(page.getByRole("link", { name: /admin/i })).toHaveCount(0);
+  });
+});
+
+test.describe("the admin", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockApi(page, { bannedUsernames: ["Priya"] });
+    await signInAsAdmin(page);
+  });
+
+  test("gets an admin tab and reaches the panel without a key", async ({
+    page,
+  }) => {
+    await page.goto("./");
+
+    await page.getByRole("link", { name: /Admin/ }).click();
+
+    // No key form: the token they already hold is what authorises them.
+    await expect(page.getByLabel("Admin key")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "🍺 Next pub" }),
+    ).toBeVisible();
+
+    // The tab bar survives, so the panel is somewhere to dip into and leave.
+    await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+
+    await page.screenshot({
+      path: "e2e/screenshots/admin-tab.png",
+      fullPage: true,
+    });
+  });
+
+  test("sees the current cutovers already filled in, in local time", async ({
+    page,
+  }) => {
+    await page.goto("./admin");
+
+    // 16:00Z and 04:00Z, which on a UK phone in August are 17:00 and 05:00.
+    // Asserted through the browser's own timezone rather than hard-coded, so
+    // this passes wherever CI happens to be.
+    await expect(page.getByLabel("Go live")).not.toHaveValue("");
+    await expect(page.getByLabel("Read only")).not.toHaveValue("");
+  });
+
+  test("can moderate someone else's post from the feed", async ({ page }) => {
+    await page.goto("./");
+
+    await page.getByRole("button", { name: /Options for Priya's post/ }).click();
+
+    await expect(
+      page.getByRole("menuitem", { name: "Delete this post" }),
+    ).toBeVisible();
+    // Priya is in the banned fixture, so the offer is to lift it.
+    const unhide = page.getByRole("menuitem", { name: "Un-hide Priya" });
+    await expect(unhide).toBeVisible();
+
+    // ...and then again, properly. The card used to be overflow: hidden and
+    // cropped its own menu, so the admin saw the first item and nothing else.
+    // Neither toBeVisible nor toBeInViewport caught that — both were measured
+    // against the bug and both passed, because a clipped element still has a
+    // layout box and IntersectionObserver did not report it as hidden either.
+    // Asking the document what is actually painted at that point does catch it.
+    // Two details, both learned the hard way against the real bug:
+    //  - getBoundingClientRect, not Playwright's boundingBox(). The former is
+    //    viewport-relative and so is elementFromPoint; the latter is
+    //    page-relative, and mixing them probes the wrong pixel once scrolled.
+    //  - compare element IDENTITY, not text. A clipped item's hit test returns
+    //    an ancestor container, and that container's textContent contains the
+    //    item's own label — so a `toContain` check passes over the bug.
+    const reachable = await unhide.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        rect.x + rect.width / 2,
+        rect.y + rect.height / 2,
+      );
+      return hit !== null && (hit === element || element.contains(hit));
+    });
+
+    expect(reachable).toBe(true);
+
+    await page.screenshot({
+      path: "e2e/screenshots/admin-post-options.png",
+      fullPage: true,
+    });
+  });
+
+  test("keeps the round reset behind a danger zone once the game is live", async ({
+    page,
+  }) => {
+    await page.goto("./admin");
+
+    await expect(
+      page.getByRole("button", { name: "Start a new round" }),
+    ).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Danger zone" }).click();
+
+    await expect(
+      page.getByRole("button", { name: "Yes, start a new round" }),
+    ).toBeVisible();
+  });
+
+  test("offers the round reset directly while still in practice", async ({
+    page,
+  }) => {
+    // The control for the test above: the guard must not make the button
+    // unreachable during the build week, which is when it is actually used.
+    await mockApi(page, { mode: "Practice" });
+    await page.goto("./admin");
+
+    await expect(
+      page.getByRole("button", { name: "Start a new round" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Danger zone" })).toHaveCount(
+      0,
+    );
   });
 });

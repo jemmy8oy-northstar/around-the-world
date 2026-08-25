@@ -5,7 +5,8 @@
   z-index: 20;
 
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Follows the tab count rather than assuming four — the admin gets a fifth. */
+  grid-template-columns: repeat(var(--tabbar-columns, 4), 1fr);
 
   /* --bg-card is a 5%-white glass fill, which over a scrolling photo feed is
      effectively transparent — post captions were legible straight through the

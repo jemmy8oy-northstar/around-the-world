@@ -18,6 +18,7 @@ public class PostFeedService(
     public async Task<IReadOnlyList<IDomainPost>> GetFeedAsync(
         Guid viewerId,
         string? countryCode = null,
+        bool viewerIsAdmin = false,
         CancellationToken cancellationToken = default)
     {
         var roundId = await activeRoundReader.GetActiveRoundIdAsync(cancellationToken);
@@ -34,8 +35,12 @@ public class PostFeedService(
         }
 
         // The shadow ban: hidden from everyone except the banned user, whose own
-        // feed is unchanged so they cannot tell anything happened.
-        query = query.Where(p => !p.User!.IsShadowBanned || p.UserId == viewerId);
+        // feed is unchanged so they cannot tell anything happened — and the admin,
+        // because a ban you can no longer see is one you can no longer lift.
+        if (!viewerIsAdmin)
+        {
+            query = query.Where(p => !p.User!.IsShadowBanned || p.UserId == viewerId);
+        }
 
         var posts = await query
             .OrderByDescending(p => p.CreatedAt)

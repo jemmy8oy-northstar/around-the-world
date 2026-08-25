@@ -1,19 +1,64 @@
 import { useState } from "react";
 import type { Post } from "../api/generatedApi";
 import { countryFlag, countryName } from "../countries/countries";
+import { PostActionsMenu, type PostAction } from "./PostActionsMenu";
 import "./PostCard.css";
 
 interface PostCardProps {
   post: Post;
   canDelete: boolean;
+  /** The admin, who can act on anyone's post rather than only their own. */
+  canModerate?: boolean;
+  /** Admin-only: this author is currently hidden from everyone else. */
+  authorIsShadowBanned?: boolean;
   onDelete?: (postId: string) => void;
+  onShadowBan?: (username: string, shadowBan: boolean) => void;
 }
 
-export function PostCard({ post, canDelete, onDelete }: PostCardProps) {
+export function PostCard({
+  post,
+  canDelete,
+  canModerate = false,
+  authorIsShadowBanned = false,
+  onDelete,
+  onShadowBan,
+}: PostCardProps) {
   const [photoFailed, setPhotoFailed] = useState(false);
 
+  const moderation: PostAction[] = [];
+
+  if (canModerate && post.id) {
+    moderation.push({
+      label: "Delete this post",
+      destructive: true,
+      confirm: `Delete ${post.username}'s post? It disappears from the feed for everyone.`,
+      onSelect: () => onDelete?.(post.id!),
+    });
+  }
+
+  if (canModerate && post.username && !canDelete) {
+    // Not offered on your own post: shadow-banning yourself would hide you from
+    // everyone while looking completely normal from your side, which is a trap
+    // rather than a feature.
+    moderation.push(
+      authorIsShadowBanned
+        ? {
+            label: `Un-hide ${post.username}`,
+            onSelect: () => onShadowBan?.(post.username, false),
+          }
+        : {
+            label: `Shadow ban ${post.username}`,
+            destructive: true,
+            confirm: `Shadow ban ${post.username}? Their posts vanish for everyone else. They will not be told.`,
+            onSelect: () => onShadowBan?.(post.username, true),
+          },
+    );
+  }
+
   return (
-    <article className="post">
+    <article
+      className={`post${authorIsShadowBanned ? " post--shadow-banned" : ""}`}
+    >
       <div className="post__photo-frame">
         {post.photoUrl && !photoFailed ? (
           <img
@@ -48,6 +93,11 @@ export function PostCard({ post, canDelete, onDelete }: PostCardProps) {
       <div className="post__body">
         <div className="post__meta">
           <span className="post__author">{post.username}</span>
+
+          {authorIsShadowBanned && (
+            <span className="post__hidden-badge">Hidden</span>
+          )}
+
           {post.createdAt && (
             <time className="post__time" dateTime={post.createdAt}>
               {new Date(post.createdAt).toLocaleTimeString([], {
@@ -56,6 +106,11 @@ export function PostCard({ post, canDelete, onDelete }: PostCardProps) {
               })}
             </time>
           )}
+
+          <PostActionsMenu
+            actions={moderation}
+            label={`Options for ${post.username}'s post`}
+          />
         </div>
 
         {post.caption && <p className="post__caption">{post.caption}</p>}

@@ -14,6 +14,7 @@ const SESSION = {
   refreshToken: "e2e-refresh-token",
   userId: "11111111-1111-1111-1111-111111111111",
   username: "Dave",
+  isAdmin: false,
 };
 
 const POSTS = [
@@ -70,13 +71,20 @@ export interface MockOptions {
   mode?: "Practice" | "Live" | "Finished";
   posts?: typeof POSTS;
   tally?: typeof TALLY;
+  /** Admin-only: who the feed should mark as hidden from everyone else. */
+  bannedUsernames?: string[];
 }
 
 export async function mockApi(
   page: Page,
   options: MockOptions = {},
 ): Promise<void> {
-  const { mode = "Live", posts = POSTS, tally = TALLY } = options;
+  const {
+    mode = "Live",
+    posts = POSTS,
+    tally = TALLY,
+    bannedUsernames = [],
+  } = options;
 
   await page.route("**/api/game", (route) =>
     route.fulfill({
@@ -119,6 +127,14 @@ export async function mockApi(
   await page.route("**/api/admin/**", (route) =>
     route.fulfill({ status: 200, json: 3 }),
   );
+
+  // Registered after the catch-all, which returns the bare number the pub-stop
+  // route answers with — Playwright uses the last matching route, and this one
+  // has to win. Without it the banned-users query would hand the feed a `3`
+  // where it expects a list of names.
+  await page.route("**/api/admin/users/banned", (route) =>
+    route.fulfill({ json: bannedUsernames }),
+  );
 }
 
 /** Puts a session in storage so a spec can start on an authenticated screen. */
@@ -127,5 +143,19 @@ export async function signIn(page: Page): Promise<void> {
     (session) =>
       window.localStorage.setItem("atw.session", JSON.stringify(session)),
     SESSION,
+  );
+}
+
+/**
+ * Signs in as the one player who owns the admin surface. Separate from
+ * {@link signIn} so every existing spec keeps running as an ordinary guest —
+ * the admin sees controls on other people's posts, and a shared fixture would
+ * quietly change what half the suite is testing.
+ */
+export async function signInAsAdmin(page: Page): Promise<void> {
+  await page.addInitScript(
+    (session) =>
+      window.localStorage.setItem("atw.session", JSON.stringify(session)),
+    { ...SESSION, username: "james", isAdmin: true },
   );
 }

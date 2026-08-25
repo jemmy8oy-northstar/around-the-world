@@ -27,7 +27,7 @@ public static class PostRoutes
 
         group.MapDelete("/{postId:guid}", DeletePost)
             .WithName("DeletePost")
-            .WithSummary("Soft-deletes your own post.")
+            .WithSummary("Soft-deletes your own post — or any post, if you are the admin.")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -42,7 +42,10 @@ public static class PostRoutes
         [FromQuery] string? country = null)
     {
         var posts = await postFeedService.GetFeedAsync(
-            CurrentUser.IdFrom(principal), country, cancellationToken);
+            CurrentUser.IdFrom(principal),
+            country,
+            CurrentUser.IsAdmin(principal),
+            cancellationToken);
 
         return TypedResults.Ok(posts.Select(mapper.Map<Post>).ToList());
     }
@@ -77,8 +80,15 @@ public static class PostRoutes
         IPostDeletionService postDeletionService,
         CancellationToken cancellationToken)
     {
+        // The admin deletes through this same route rather than the key-gated one,
+        // so the moderation button on a post is the ordinary delete button with a
+        // wider remit — one client path, and the authority is read from the token
+        // rather than chosen by the caller.
         await postDeletionService.DeleteAsync(
-            postId, CurrentUser.IdFrom(principal), isAdmin: false, cancellationToken);
+            postId,
+            CurrentUser.IdFrom(principal),
+            CurrentUser.IsAdmin(principal),
+            cancellationToken);
 
         return TypedResults.NoContent();
     }

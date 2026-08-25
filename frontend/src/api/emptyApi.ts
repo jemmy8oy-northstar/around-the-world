@@ -71,6 +71,7 @@ export const baseQueryWithReauth: BaseQueryFn<
           refreshToken: string;
           userId: string;
           username: string;
+          isAdmin?: boolean;
         }
       | undefined;
 
@@ -80,11 +81,16 @@ export const baseQueryWithReauth: BaseQueryFn<
       return result;
     }
 
+    // Rebuilt field by field rather than spread, so anything the refresh
+    // response does not carry is dropped on purpose. That makes isAdmin easy to
+    // lose silently: forget the line and the admin tab disappears the first time
+    // the token rolls over, which on the night is an hour in. Pinned by a test.
     const next = {
       accessToken: refreshed.accessToken,
       refreshToken: refreshed.refreshToken,
       userId: refreshed.userId,
       username: refreshed.username,
+      isAdmin: refreshed.isAdmin === true,
     };
 
     writeSession(next);

@@ -38,3 +38,6 @@ bin\\Debug/
 # Local photo storage — the FileSystemPhotoStorage fallback used when no OCI
 # credentials are configured. Uploaded photos, never source.
 photo-store/
+
+# Throwaway probes and mutation runs — proofs, not product.
+tmp-*

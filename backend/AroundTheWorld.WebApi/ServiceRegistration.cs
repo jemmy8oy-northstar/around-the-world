@@ -53,6 +53,7 @@ public static class ServiceRegistration
         services.AddScoped<IGameBootstrapper, GameBootstrapper>();
 
         // Auth
+        services.AddSingleton<IAdminIdentity, AdminIdentity>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPartyCodeValidator, PartyCodeValidator>();
         services.AddScoped<IUsernameClaimService, UsernameClaimService>();

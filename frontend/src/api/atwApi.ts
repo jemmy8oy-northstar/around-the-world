@@ -8,17 +8,20 @@
 import { enhancedApi } from "./generatedApi";
 
 export const atwApi = enhancedApi.enhanceEndpoints({
-  addTagTypes: ["Posts", "Countries", "Game"],
+  addTagTypes: ["Posts", "Countries", "Game", "Moderation"],
   endpoints: {
     getPosts: { providesTags: ["Posts"] },
     getCountryTally: { providesTags: ["Countries"] },
     getGameState: { providesTags: ["Game"] },
+    getShadowBannedUsers: { providesTags: ["Moderation"] },
     deletePost: { invalidatesTags: ["Posts", "Countries"] },
     adminDeletePost: { invalidatesTags: ["Posts", "Countries"] },
     advancePubStop: { invalidatesTags: ["Game"] },
     startNewRound: { invalidatesTags: ["Game", "Posts", "Countries"] },
     updateCutovers: { invalidatesTags: ["Game"] },
-    setShadowBan: { invalidatesTags: ["Posts", "Countries"] },
+    // Also invalidates Moderation, or the "Hidden" badge would keep describing
+    // the state before the tap that changed it.
+    setShadowBan: { invalidatesTags: ["Posts", "Countries", "Moderation"] },
   },
 });
 
@@ -34,4 +37,5 @@ export const {
   useSetShadowBanMutation,
   useReleaseUsernameMutation,
   useAdminDeletePostMutation,
+  useGetShadowBannedUsersQuery,
 } = atwApi;

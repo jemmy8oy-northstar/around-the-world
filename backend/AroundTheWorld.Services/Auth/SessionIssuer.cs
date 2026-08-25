@@ -1,5 +1,6 @@
 using AroundTheWorld.Abstractions.DomainModels;
 using AroundTheWorld.Abstractions.Services;
+using AroundTheWorld.Abstractions.Services.Admin;
 using AroundTheWorld.Abstractions.Services.Auth;
 using AroundTheWorld.Database;
 using AroundTheWorld.DomainModels.Models;
@@ -13,6 +14,7 @@ public class SessionIssuer(
     AppDbContext dbContext,
     IAccessTokenIssuer accessTokenIssuer,
     IRefreshTokenFactory refreshTokenFactory,
+    IAdminIdentity adminIdentity,
     IOptions<JwtOptions> options,
     TimeProvider timeProvider) : ISessionIssuer
 {
@@ -39,6 +41,7 @@ public class SessionIssuer(
             RefreshToken = refreshToken,
             UserId = user.Id,
             Username = user.Username,
+            IsAdmin = adminIdentity.IsAdmin(user.Username),
         };
     }
 }

@@ -2,11 +2,13 @@ import { useGetPostsQuery, useDeletePostMutation } from "../api/atwApi";
 import { PostList } from "../components/PostList";
 import { EmptyState } from "../components/EmptyState";
 import { useSession } from "../auth/useSession";
+import { useModeration } from "../auth/useModeration";
 
 export default function Feed() {
   const session = useSession();
   const { data: posts, isLoading, isError } = useGetPostsQuery({});
   const [deletePost] = useDeletePostMutation();
+  const { canModerate, shadowBannedUsernames, onShadowBan } = useModeration();
 
   if (isLoading)
     return (
@@ -41,7 +43,10 @@ export default function Feed() {
     <PostList
       posts={posts}
       currentUserId={session?.userId ?? ""}
+      canModerate={canModerate}
+      shadowBannedUsernames={shadowBannedUsernames}
       onDelete={(postId) => deletePost({ postId })}
+      onShadowBan={onShadowBan}
       showStopDividers
     />
   );

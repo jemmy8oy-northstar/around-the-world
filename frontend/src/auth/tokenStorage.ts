@@ -10,6 +10,12 @@ export interface StoredSession {
   refreshToken: string;
   userId: string;
   username: string;
+  /**
+   * Whether this player owns the admin surface. Only decides what the app draws
+   * — every admin action is authorised server-side from the token, so editing
+   * this in devtools gets you a tab whose every button returns 403.
+   */
+  isAdmin: boolean;
 }
 
 const STORAGE_KEY = "atw.session";
@@ -26,7 +32,10 @@ export function readSession(): StoredSession | null {
     if (!parsed.accessToken || !parsed.refreshToken || !parsed.username)
       return null;
 
-    return parsed as StoredSession;
+    // Normalised rather than trusted: a session written before this field
+    // existed has no isAdmin at all, and `undefined` must read as "not the
+    // admin" rather than leaking into a truthiness check somewhere downstream.
+    return { ...parsed, isAdmin: parsed.isAdmin === true } as StoredSession;
   } catch {
     return null;
   }

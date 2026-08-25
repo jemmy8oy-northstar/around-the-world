@@ -94,7 +94,6 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
   const [goLiveAt, setGoLiveAt] = useState("");
   const [readOnlyAt, setReadOnlyAt] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
 
   // Both boxes used to start blank, so the one screen that owns the cutovers was
   // also the one place you could not read them. Seeded from the game state the
@@ -107,9 +106,14 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
 
   // Resetting the round archives everyone's photos. In Practice that is the
   // point — it is how the build week's test posts get cleared before the real
-  // thing. Once Live it is a mis-tap in a dark pub, so it moves behind a
-  // deliberate disclosure rather than sitting next to the button used all night.
-  const roundResetIsRoutine = game?.mode === "Practice";
+  // thing. From go-live onwards it is only ever a mis-tap in a dark pub, so it
+  // is not rendered at all: James asked for it to disappear rather than sit
+  // behind a disclosure, and a control you cannot see cannot be fat-fingered.
+  //
+  // The way back, if the night ever genuinely needs one: push "Go live" forward
+  // on this same page, which returns the game to Practice and brings the button
+  // back. So the escape hatch is here, not in a curl command.
+  const roundResetVisible = game?.mode === "Practice";
 
   async function run(
     label: string,
@@ -159,7 +163,7 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
         >
           🍺 Next pub
         </button>
-        {roundResetIsRoutine ? (
+        {roundResetVisible && (
           <button
             className="admin__danger"
             type="button"
@@ -173,46 +177,6 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
           >
             Start a new round
           </button>
-        ) : (
-          <div className="admin__danger-zone">
-            {dangerZoneOpen ? (
-              <>
-                <p className="admin__warning" role="status">
-                  The game is <strong>{game?.mode}</strong>. Starting a round
-                  clears the feed for everyone — nothing is deleted, but the
-                  night so far is archived out of sight.
-                </p>
-                <button
-                  className="admin__danger"
-                  type="button"
-                  onClick={() =>
-                    run(
-                      "New round",
-                      () => startRound({ startRoundRequest: {} }).unwrap(),
-                      "Really start a new round mid-game? Everyone's feed goes empty.",
-                    )
-                  }
-                >
-                  Yes, start a new round
-                </button>
-                <button
-                  className="admin__secondary"
-                  type="button"
-                  onClick={() => setDangerZoneOpen(false)}
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                className="admin__quiet"
-                type="button"
-                onClick={() => setDangerZoneOpen(true)}
-              >
-                Danger zone
-              </button>
-            )}
-          </div>
         )}
       </section>
 

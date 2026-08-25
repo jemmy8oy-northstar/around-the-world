@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using AroundTheWorld.Abstractions.Exceptions;
+using AroundTheWorld.Abstractions.Services.Admin;
 
 namespace AroundTheWorld.WebApi.Admin;
 
@@ -19,4 +20,12 @@ public static class CurrentUser
             ? userId
             : throw new UnauthorizedException("Your session has expired — join again.");
     }
+
+    /// <summary>
+    /// Whether the caller's token carries the admin marker. Returns false rather
+    /// than throwing for an anonymous caller: the admin routes accept a shared
+    /// key too, so "no token" is a normal way to arrive, not an error.
+    /// </summary>
+    public static bool IsAdmin(ClaimsPrincipal? principal) =>
+        principal?.HasClaim(AdminClaims.IsAdmin, AdminClaims.TrueValue) == true;
 }

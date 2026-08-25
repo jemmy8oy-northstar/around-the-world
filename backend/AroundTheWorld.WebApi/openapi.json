@@ -269,7 +269,7 @@
         "tags": [
           "PostRoutes"
         ],
-        "summary": "Soft-deletes your own post.",
+        "summary": "Soft-deletes your own post — or any post, if you are the admin.",
         "operationId": "DeletePost",
         "parameters": [
           {
@@ -408,6 +408,30 @@
         }
       }
     },
+    "/api/admin/users/banned": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "The usernames currently shadow-banned, so the admin can see and lift a ban.",
+        "operationId": "GetShadowBannedUsers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/users/{username}/ban": {
       "post": {
         "tags": [
@@ -515,6 +539,9 @@
           },
           "username": {
             "type": "string"
+          },
+          "isAdmin": {
+            "type": "boolean"
           }
         }
       },

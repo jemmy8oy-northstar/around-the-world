@@ -1,53 +1,66 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { toLocalInputValue } from "../adminTime";
 
 /**
- * These run in whatever timezone the machine is set to, so they assert the
- * *relationship* between the instant and the rendered value rather than a fixed
- * string — a test that only passes in Europe/London would be a test that fails
- * in CI, which is UTC.
+ * Pinned to Europe/London on purpose, and this is the whole reason the file
+ * exists.
+ *
+ * The first version of these tests asserted the conversion against a value
+ * derived the same way, and ran in whatever zone the machine had. Both this
+ * sandbox and CI are **UTC** — where local time *is* UTC, every timezone bug is
+ * arithmetically invisible, and a mutation that read a naive timestamp as local
+ * instead of UTC survived with the suite still green. A test for a British
+ * Summer Time bug that only ever runs in UTC cannot fail.
+ *
+ * So the zone is fixed here rather than inherited, the party's actual date is
+ * used (28 August is inside BST, UTC+1), and the expectations are literal
+ * strings rather than round-trips through the code under test.
  */
-function expectedFor(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
-}
+const REAL_TZ = process.env.TZ;
 
-describe("toLocalInputValue", () => {
-  it("renders a UTC instant in the browser's own timezone", () => {
-    expect(toLocalInputValue("2026-08-28T16:00:00Z")).toBe(
-      expectedFor("2026-08-28T16:00:00Z"),
-    );
+beforeAll(() => {
+  process.env.TZ = "Europe/London";
+});
+
+afterAll(() => {
+  process.env.TZ = REAL_TZ;
+});
+
+describe("toLocalInputValue, on a phone in the UK on the night", () => {
+  it("shows a 16:00Z cutover as 17:00, which is what BST calls it", () => {
+    expect(toLocalInputValue("2026-08-28T16:00:00Z")).toBe("2026-08-28T17:00");
+  });
+
+  it("shows the 04:00Z read-only cutover as 05:00 the next morning", () => {
+    expect(toLocalInputValue("2026-08-29T04:00:00Z")).toBe("2026-08-29T05:00");
   });
 
   it("treats a timestamp with no designator as UTC, not as local", () => {
-    // The bug this exists to stop: a .NET DateTime with Kind=Unspecified
-    // serialises without a trailing Z, and `new Date` would then read it as
-    // local — putting the go-live box exactly one hour out for the whole of
-    // British Summer Time, on an app whose entire point is one evening in
-    // August.
-    expect(toLocalInputValue("2026-08-28T16:00:00")).toBe(
-      toLocalInputValue("2026-08-28T16:00:00Z"),
-    );
+    // A .NET DateTime whose Kind is Unspecified serialises with no trailing Z,
+    // and `new Date` then reads it as local — so a server storing UTC and a
+    // client assuming local disagree by exactly the BST offset. Silently, and
+    // only between March and October.
+    expect(toLocalInputValue("2026-08-28T16:00:00")).toBe("2026-08-28T17:00");
   });
 
   it("honours an explicit non-UTC offset rather than assuming Z", () => {
     expect(toLocalInputValue("2026-08-28T17:00:00+01:00")).toBe(
-      toLocalInputValue("2026-08-28T16:00:00Z"),
+      "2026-08-28T17:00",
     );
   });
 
-  it("round-trips back through the conversion the save button uses", () => {
-    // The save button does `new Date(value).toISOString()`. Rendering an
-    // instant and immediately saving it again must be a no-op, or simply
-    // opening the page and pressing save would shift the cutover.
-    const original = "2026-08-28T16:00:00Z";
-    const shown = toLocalInputValue(original);
+  it("is still correct outside BST, where the offset is zero", () => {
+    // The control for every assertion above: if the code simply added an hour
+    // somewhere, this is the one that would catch it.
+    expect(toLocalInputValue("2026-12-25T16:00:00Z")).toBe("2026-12-25T16:00");
+  });
 
-    expect(new Date(shown).toISOString()).toBe(
+  it("round-trips back through the conversion the save button uses", () => {
+    // The save button does `new Date(value).toISOString()`. Opening the page
+    // and pressing save without touching anything must not move the cutover.
+    const original = "2026-08-28T16:00:00Z";
+
+    expect(new Date(toLocalInputValue(original)).toISOString()).toBe(
       new Date(original).toISOString(),
     );
   });

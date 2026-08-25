@@ -53,7 +53,7 @@ const MUTATIONS = [
     file: "frontend/src/pages/adminTime.ts",
     find: "`${instant.getFullYear()}-${pad(instant.getMonth() + 1)}-${pad(instant.getDate())}` +",
     replace: "`${instant.getUTCFullYear()}-${pad(instant.getUTCMonth() + 1)}-${pad(instant.getUTCDate())}` +",
-    expect: "round-trips back through the conversion the save button uses",
+    expect: "shows a 16:00Z cutover as 17:00, which is what BST calls it",
   },
   {
     name: "a session stored before the admin flag existed reads as truthy",

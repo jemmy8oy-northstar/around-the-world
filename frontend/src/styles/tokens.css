@@ -1,24 +1,55 @@
 /* ==========================================================================
-   IRIS — design tokens
+   NIGHT FLIGHT — design tokens
    --------------------------------------------------------------------------
    The single source of truth for the visual language. Every colour, size,
    shadow and duration in the app should trace back to a variable here.
-   Semantics over raw values: components use --text-secondary, never #94a3b8.
+   Semantics over raw values: components use --text-secondary, never #ab9f8c.
 
    Dark is the default (defined on :root); [data-theme='light'] overrides.
    Full reference: docs/design-system.md at the repo root.
+
+   --------------------------------------------------------------------------
+   Why it looks like this, so the next person does not undo it by accident:
+
+   The app is a night spent travelling the world one pub at a time, and the
+   things on screen are the things in a travel wallet — stamps, a route, a
+   ticket, photographs. So the palette is a departure board seen at night:
+   deep ink navy, warm brass, and the vermilion of an air-mail border.
+
+   Brass on ink is not decoration. It is the highest-legibility warm pairing
+   there is, which is why instrument panels and departure boards have used it
+   for a century, and this app is read on a phone in a dark pub by someone who
+   is several drinks in.
+
+   The predecessor ("Iris") was indigo→violet on near-black with white glass:
+   the default palette of every generated app, which is what made it read as
+   vibe-coded. Nothing was wrong with its structure — the token names, the
+   dark-default mechanism and the scales all survive unchanged, and that is
+   exactly why re-pointing the values rotated the whole app.
    ========================================================================== */
 
 :root {
   /* --- Brand accent (theme-invariant) --------------------------------- */
-  --accent-primary: #6366f1;
-  /* indigo — the core of Iris        */
-  --accent-secondary: #a855f7;
-  /* violet — the far end of the beam */
-  --accent-contrast: #ffffff;
-  /* text placed on solid accent      */
-  --accent-border: rgba(99, 102, 241, 0.3);
+  --accent-primary: #f0b429;
+  /* brass — the departure-board glow */
+  --accent-secondary: #e2542e;
+  /* vermilion — the air-mail border   */
+  --accent-contrast: #1a1207;
+  /* text placed on solid accent.
+     ⚠️ Ink, NOT white. The accent is a light warm gold, so white-on-accent
+     fails contrast badly — this token used to be #ffffff, which was correct
+     for indigo and would have been unreadable the moment the hue moved. */
+  --accent-border: rgba(240, 180, 41, 0.32);
   /* accent-tinted hairlines          */
+  --danger-contrast: #fff6f5;
+  /* text placed on solid --danger-solid.
+     New, and it had to be: two destructive buttons (.admin__danger and
+     .ui-button--danger) were painting --accent-contrast onto a crimson
+     background. That happened to be white while the accent was indigo, so it
+     read correctly by coincidence — the moment the accent turned to brass and
+     its contrast token became ink, "Delete" would have gone near-black on
+     crimson. A token borrowed from another role is a bug waiting for the
+     palette to move. */
   --gradient-accent: linear-gradient(
     135deg,
     var(--accent-primary),
@@ -26,8 +57,19 @@
   );
 
   /* --- Typography ------------------------------------------------------ */
-  --font-main: "Inter", system-ui, -apple-system, sans-serif;
-  --font-display: "Outfit", var(--font-main);
+  /* Bricolage Grotesque for display: wide, slightly irregular, characterful —
+     the opposite of the neutral geometric sans that makes an app look
+     machine-issued. DM Sans for reading: warm, open, and quiet enough to let
+     the display face and the photographs do the talking.
+
+     ⚠️ Manrope was the first choice here and it had to be measured out again.
+     Its word-space is 2px at 12px against DM Sans's and Inter's 3px, so at
+     --text-xs the space rounded away and "Photo unavailable" rendered as
+     "Photounavailable". Visible in a screenshot, invisible to every test in
+     the suite. If you swap this token, measure the space width at 12px —
+     e2e/tmp-space.spec.ts in the PR shows how. */
+  --font-main: "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "Bricolage Grotesque", var(--font-main);
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -47,7 +89,11 @@
   --leading-tight: 1.1;
   --leading-snug: 1.3;
   --leading-body: 1.6;
-  --tracking-display: -0.02em;
+  --tracking-display: -0.01em;
+  /* Bricolage is already wide; the -0.02em that suited Outfit closed it up. */
+  --tracking-label: 0.08em;
+  /* Uppercase micro-labels — the stop counter, section headings, the mode
+     pill. Was written out as a literal in four separate files. */
 
   /* --- Spacing (4px base grid) ----------------------------------------- */
   --space-1: 4px;
@@ -72,6 +118,11 @@
   --blur-glass: 12px;
   --blur-glass-heavy: 20px;
 
+  /* --- Focus ------------------------------------------------------------ */
+  --focus-ring-width: 3px;
+  /* The three `0 0 0 3px` focus shadows in the app were three magic numbers
+     that happened to agree. */
+
   /* --- Motion ------------------------------------------------------------ */
   --duration-fast: 150ms;
   --duration-base: 300ms;
@@ -79,95 +130,104 @@
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --theme-transition:
-    background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease,
-    background 0.4s ease;
+    background-color var(--duration-slow) ease, color var(--duration-slow) ease,
+    border-color var(--duration-slow) ease, background var(--duration-slow) ease;
 }
 
 /* --------------------------------------------------------------------------
-   Dark theme (default — Iris lives at night)
+   Dark theme (default — the night itself)
    -------------------------------------------------------------------------- */
 :root,
 [data-theme="dark"] {
   /* Surfaces */
-  --bg-page: #0a0a0c;
-  --bg-card: rgba(255, 255, 255, 0.05);
-  --glass-hover-bg: rgba(255, 255, 255, 0.08);
-  --gradient-opacity: 0.15;
+  --bg-page: #0a0f1a;
+  /* ink navy, not neutral black: it gives the brass something to sit on */
+  --bg-card: rgba(255, 240, 219, 0.055);
+  /* the overlay is WARM. A white overlay over navy reads blue-grey and
+     clinical; a cream one reads like lamplight, and it is most of the
+     difference between this and the old look. */
+  --glass-hover-bg: rgba(255, 240, 219, 0.09);
+  --gradient-opacity: 0.14;
 
   /* Text */
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #f7efe1;
+  --text-secondary: #ab9f8c;
+  --text-muted: #7b7263;
 
   /* Borders */
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.2);
+  --glass-border: rgba(255, 238, 214, 0.12);
+  --border-strong: rgba(255, 238, 214, 0.24);
 
   /* Accent, themed */
-  --accent-hover: #818cf8;
-  --accent-fg: #a5b4fc;
-  --accent-soft: rgba(99, 102, 241, 0.16);
+  --accent-hover: #ffc851;
+  --accent-fg: #f5c25a;
+  --accent-soft: rgba(240, 180, 41, 0.16);
 
-  /* Status */
-  --success: #34d399;
-  --success-soft: rgba(52, 211, 153, 0.14);
-  --warning: #fbbf24;
-  --warning-soft: rgba(251, 191, 36, 0.14);
-  --danger: #f87171;
-  --danger-soft: rgba(248, 113, 113, 0.14);
-  --danger-solid: #dc2626;
-  --danger-solid-hover: #ef4444;
+  /* Status. Warning is deliberately a full step oranger than the brass
+     accent — they sit next to each other on the mode pill and the
+     shadow-banned badge, and two golds would read as one. */
+  --success: #56c98b;
+  --success-soft: rgba(86, 201, 139, 0.14);
+  --warning: #e08a2e;
+  --warning-soft: rgba(224, 138, 46, 0.16);
+  --danger: #f4676f;
+  --danger-soft: rgba(244, 103, 111, 0.14);
+  --danger-solid: #d62839;
+  --danger-solid-hover: #e5424c;
 
-  /* Elevation */
-  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.25);
-  --shadow-2: 0 12px 28px rgba(0, 0, 0, 0.35);
-  --shadow-3: 0 20px 40px rgba(0, 0, 0, 0.45);
-  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.35);
+  /* Elevation — warm-tinted rather than pure black, so cards lift off the
+     navy instead of punching a hole in it. */
+  --shadow-1: 0 2px 8px rgba(3, 6, 12, 0.4);
+  --shadow-2: 0 12px 28px rgba(3, 6, 12, 0.5);
+  --shadow-3: 0 20px 40px rgba(3, 6, 12, 0.6);
+  --shadow-glow: 0 0 28px rgba(240, 180, 41, 0.3);
 
   /* Focus */
-  --focus-ring: #818cf8;
+  --focus-ring: #f5c25a;
 }
 
 /* --------------------------------------------------------------------------
-   Light theme
+   Light theme — the same wallet in daylight: map paper and ink.
    -------------------------------------------------------------------------- */
 [data-theme="light"] {
   /* Surfaces */
-  --bg-page: #f8fafc;
-  --bg-card: rgba(0, 0, 0, 0.03);
-  --glass-hover-bg: rgba(0, 0, 0, 0.05);
-  --gradient-opacity: 0.05;
+  --bg-page: #f8f1e4;
+  --bg-card: rgba(28, 20, 8, 0.04);
+  --glass-hover-bg: rgba(28, 20, 8, 0.07);
+  --gradient-opacity: 0.07;
 
   /* Text */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-primary: #1d1912;
+  --text-secondary: #5c5347;
+  --text-muted: #8d8375;
 
   /* Borders */
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.16);
+  --glass-border: rgba(28, 20, 8, 0.1);
+  --border-strong: rgba(28, 20, 8, 0.2);
 
-  /* Accent, themed */
-  --accent-hover: #4f46e5;
-  --accent-fg: #4338ca;
-  --accent-soft: rgba(99, 102, 241, 0.1);
+  /* Accent, themed. Brass is a LIGHT colour, so accent-coloured *text* has to
+     darken on paper or it disappears — hence #96650a rather than the
+     --accent-primary used on the dark side. */
+  --accent-hover: #b57a00;
+  --accent-fg: #96650a;
+  --accent-soft: rgba(240, 180, 41, 0.18);
 
   /* Status */
-  --success: #059669;
-  --success-soft: rgba(5, 150, 105, 0.12);
-  --warning: #b45309;
-  --warning-soft: rgba(180, 83, 9, 0.12);
-  --danger: #dc2626;
-  --danger-soft: rgba(220, 38, 38, 0.1);
-  --danger-solid: #dc2626;
-  --danger-solid-hover: #b91c1c;
+  --success: #1f7a4d;
+  --success-soft: rgba(31, 122, 77, 0.12);
+  --warning: #a35a12;
+  --warning-soft: rgba(163, 90, 18, 0.12);
+  --danger: #c22a33;
+  --danger-soft: rgba(194, 42, 51, 0.1);
+  --danger-solid: #c22a33;
+  --danger-solid-hover: #a01f27;
 
   /* Elevation */
-  --shadow-1: 0 2px 8px rgba(15, 23, 42, 0.06);
-  --shadow-2: 0 12px 28px rgba(15, 23, 42, 0.1);
-  --shadow-3: 0 20px 40px rgba(15, 23, 42, 0.14);
-  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.25);
+  --shadow-1: 0 2px 8px rgba(60, 42, 16, 0.08);
+  --shadow-2: 0 12px 28px rgba(60, 42, 16, 0.12);
+  --shadow-3: 0 20px 40px rgba(60, 42, 16, 0.16);
+  --shadow-glow: 0 0 28px rgba(240, 180, 41, 0.35);
 
   /* Focus */
-  --focus-ring: #4f46e5;
+  --focus-ring: #96650a;
 }

@@ -16,30 +16,53 @@
   border-bottom: 1px solid var(--glass-border);
 }
 
+/* The route line: a hairline of brass under the whole banner, so the top of
+   every screen reads as a journey in progress rather than a page header. */
+.banner::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--gradient-accent);
+  opacity: 0.7;
+}
+
+/* The stop counter is the one number that matters all night, so it is the only
+   filled brass on the screen: a ticket stub with ink digits.
+
+   It had two punched "perforation" notches. They are gone: the notches were
+   filled with --bg-page and sit on the banner, whose own background is
+   color-mix(--bg-page 92%) — so they were painting the page colour onto very
+   nearly the page colour and rendered invisible. Decoration that cannot be
+   seen is just code. */
 .banner__stop {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   line-height: 1;
 
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--radius-md);
+  background: var(--gradient-accent);
+  border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
+  box-shadow: var(--shadow-1);
 }
 
 .banner__stop-label {
   font-size: 0.625rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent-fg);
+  letter-spacing: var(--tracking-label);
+  font-weight: var(--weight-bold);
+  color: var(--accent-contrast);
+  opacity: 0.75;
 }
 
 .banner__stop-number {
   font-family: var(--font-display);
   font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  color: var(--accent-fg);
+  font-weight: var(--weight-black);
+  color: var(--accent-contrast);
   font-variant-numeric: tabular-nums;
 }
 
@@ -47,15 +70,22 @@
   flex: 1;
   font-family: var(--font-display);
   font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
+  letter-spacing: var(--tracking-display);
 }
 
+/* Mode is an exception, not a status: it says the night is not the real thing
+   yet, or is over. Outlined rather than filled so it never competes with the
+   stop stub, which is the only filled brass on the screen. */
 .banner__mode {
   font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  border-radius: var(--radius-pill);
-  padding: var(--space-1) var(--space-3);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  border-radius: var(--radius-sm);
+  border: 1px solid currentcolor;
+  padding: var(--space-1) var(--space-2);
   white-space: nowrap;
 }
 

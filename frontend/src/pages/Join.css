@@ -8,22 +8,48 @@
   text-align: center;
 }
 
+/* The mark is franked, like the stamp on the cover of a travel document: a
+   dashed brass ring with the globe punched into the middle of it. */
 .join__mark {
-  font-size: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 6rem;
+  height: 6rem;
+  margin-bottom: var(--space-5);
+
+  font-size: 3rem;
   line-height: 1;
-  margin-bottom: var(--space-4);
+
+  border: 2px dashed var(--accent-border);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
 }
 
+/* Solid, not gradient-clipped. Text filled with a background gradient is the
+   single most recognisable tell of a generated app, and it costs contrast:
+   the far end of the beam was violet on near-black, i.e. the least legible
+   thing on the first screen anyone sees. */
 .join__title {
   font-family: var(--font-display);
   font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-black);
   letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
   margin: 0 0 var(--space-3);
+  color: var(--text-primary);
+}
+
+/* The route line under the title — the same brass hairline that runs beneath
+   the banner on every other screen, so the first screen belongs to the set. */
+.join__title::after {
+  content: "";
+  display: block;
+  width: var(--space-8);
+  height: 3px;
+  margin: var(--space-4) auto 0;
+  border-radius: var(--radius-pill);
   background: var(--gradient-accent);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 .join__blurb {
@@ -44,7 +70,9 @@
 
 .join__label {
   font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
   color: var(--text-secondary);
   margin-bottom: var(--space-2);
 }
@@ -65,13 +93,21 @@
 .join__input:focus {
   outline: none;
   border-color: var(--accent-border);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 var(--focus-ring-width) var(--accent-soft);
 }
 
+/* The party code is the ticket number: brass, tracked wide, tabular so the
+   six digits do not shuffle sideways as they are typed. */
 .join__input--code {
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
   letter-spacing: 0.4em;
+  text-indent: 0.4em;
+  /* Balances the trailing letter-space, which otherwise pushes the digits
+     visibly left of centre in a centred field. */
   text-align: center;
+  color: var(--accent-fg);
   font-variant-numeric: tabular-nums;
 }
 
@@ -84,14 +120,18 @@
   margin: 0 0 var(--space-4);
 }
 
+/* Squared to a ticket rather than a pill — the pill is the other half of the
+   generated-app tell, and a boarding pass has corners. */
 .join__submit {
   background: var(--gradient-accent);
   color: var(--accent-contrast);
   border: none;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-6);
+  font-family: var(--font-display);
   font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.02em;
   cursor: pointer;
 
   /* Comfortable thumb target for someone three pints in. */

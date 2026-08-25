@@ -195,12 +195,11 @@ test.describe("admin", () => {
     await expect(
       page.getByRole("button", { name: "🍺 Next pub" }),
     ).toBeVisible();
-    // The mocked game is Live, so the round reset sits behind the danger zone
-    // rather than next to the button used all night. This assertion used to
-    // name "Start a new round" directly.
+    // The mocked game is Live, so the round reset is not on the page at all.
+    // This assertion used to name "Start a new round" directly.
     await expect(
-      page.getByRole("button", { name: "Danger zone" }),
-    ).toBeVisible();
+      page.getByRole("button", { name: /new round/i }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: /Release name/ }),
     ).toBeVisible();
@@ -304,35 +303,36 @@ test.describe("the admin", () => {
     });
   });
 
-  test("keeps the round reset behind a danger zone once the game is live", async ({
+  test("removes the round reset entirely once the game is live", async ({
     page,
   }) => {
     await page.goto("./admin");
 
-    await expect(
-      page.getByRole("button", { name: "Start a new round" }),
-    ).toHaveCount(0);
+    // Matched loosely on purpose: the point is that no control anywhere on the
+    // page can start a round, not that one particular label is absent. A
+    // disclosure-shaped replacement ("Danger zone" → "Yes, start a new round")
+    // passes an exact-label assertion while leaving the reset one tap away.
+    await expect(page.getByRole("button", { name: /new round/i })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole("button", { name: /danger/i })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Danger zone" }).click();
-
+    // The rest of the panel is untouched — "disappears" must not mean the
+    // section it lived in stopped rendering.
     await expect(
-      page.getByRole("button", { name: "Yes, start a new round" }),
+      page.getByRole("button", { name: "🍺 Next pub" }),
     ).toBeVisible();
   });
 
-  test("offers the round reset directly while still in practice", async ({
-    page,
-  }) => {
-    // The control for the test above: the guard must not make the button
-    // unreachable during the build week, which is when it is actually used.
+  test("offers the round reset while still in practice", async ({ page }) => {
+    // The control for the test above: hiding it must not make it unreachable
+    // during the build week, which is when it is actually used — and it is also
+    // the way back if the night ever needs one (push "Go live" forward).
     await mockApi(page, { mode: "Practice" });
     await page.goto("./admin");
 
     await expect(
       page.getByRole("button", { name: "Start a new round" }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Danger zone" })).toHaveCount(
-      0,
-    );
   });
 });

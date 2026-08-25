@@ -150,37 +150,7 @@
   line-height: var(--leading-body);
 }
 
-/* --- Danger zone ------------------------------------------------------ */
-
-/* Once the game is Live, resetting the round stops being routine housekeeping
-   and becomes the most destructive thing on the page. It moves behind this
-   disclosure so it is never one tap away from the button used all night. */
-.admin__danger-zone {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
-}
-
-.admin__quiet {
-  align-self: flex-start;
-  background: none;
-  border: none;
-  padding: var(--space-2) 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.admin__warning {
-  margin: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--warning);
-  border-radius: var(--radius-md);
-  background: var(--warning-soft);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  line-height: var(--leading-body);
-}
+/* The round reset used to move behind a "Danger zone" disclosure once the game
+   was Live. James asked for it to disappear instead, so it is simply not
+   rendered outside Practice and the three classes that dressed the disclosure
+   (.admin__danger-zone, .admin__quiet, .admin__warning) are gone with it. */

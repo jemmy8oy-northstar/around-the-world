@@ -47,9 +47,13 @@ apps:
         value: "around-the-world"
       - name: PhotoStorage__Region
         value: "uk-london-1"
-      # e.g. https://{namespace}.compat.objectstorage.uk-london-1.oraclecloud.com
+      # The OCI tenancy namespace here is the same one `registryPrefix` above
+      # pushes images to. Leaving this empty is NOT a safe default: the backend
+      # treats "any one storage setting missing" as "use the local disk", so an
+      # empty value here silently discards every photo on the next pod restart
+      # even when the access keys are correct. See PhotoStorageOptions.
       - name: PhotoStorage__ServiceUrl
-        value: ""
+        value: "https://lr7uc6l49odc.compat.objectstorage.uk-london-1.oraclecloud.com"
       # Public bucket URL. Leave empty to proxy photos through the API instead —
       # which is what a private bucket needs.
       - name: PhotoStorage__PublicBaseUrl

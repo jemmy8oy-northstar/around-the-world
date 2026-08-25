@@ -72,9 +72,12 @@
 }
 
 /* The country a drink came from is the whole game, so it is franked onto the
-   photo like a customs stamp: squared off, brass-outlined, tracked uppercase.
-   It sits on a dark scrim rather than clear glass because it lands on an
-   unknown photograph and has to stay readable over a white pint glass. */
+   photo like a customs stamp: squared off, outlined, tracked uppercase. It
+   sits on a dark scrim because it lands on an unknown photograph and has to
+   stay readable over a white pint glass.
+   The scrim used to lean on a backdrop blur for part of that opacity; the blur
+   is gone with the rest of the glass, so the scrim itself carries it — 55% →
+   62%, which is the same rendered darkness without the paint layer. */
 .post__country {
   position: absolute;
   left: var(--space-3);
@@ -84,9 +87,7 @@
   align-items: center;
   gap: var(--space-2);
 
-  background: color-mix(in srgb, #000 55%, transparent);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  background: color-mix(in srgb, #000 62%, transparent);
   border: 1px solid var(--accent-border);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-3);

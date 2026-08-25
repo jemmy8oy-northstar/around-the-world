@@ -39,9 +39,9 @@
   flex-direction: column;
   min-width: 13rem;
 
-  background: color-mix(in srgb, var(--bg-page) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass-heavy));
-  -webkit-backdrop-filter: blur(var(--blur-glass-heavy));
+  /* Solid rather than translucent: with no blur behind it, a see-through
+     sheet would let whatever is under it show through. */
+  background: var(--bg-page);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-2);

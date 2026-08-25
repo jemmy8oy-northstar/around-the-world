@@ -120,7 +120,7 @@
 }
 
 .admin__primary {
-  background: var(--gradient-accent);
+  background: var(--accent-primary);
   color: var(--accent-contrast);
 }
 

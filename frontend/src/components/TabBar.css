@@ -8,13 +8,11 @@
   /* Follows the tab count rather than assuming four — the admin gets a fifth. */
   grid-template-columns: repeat(var(--tabbar-columns, 4), 1fr);
 
-  /* --bg-card is a 5%-white glass fill, which over a scrolling photo feed is
-     effectively transparent — post captions were legible straight through the
-     bar. Mixing toward the page colour keeps the frosted look but restores a
-     readable surface. */
-  background: color-mix(in srgb, var(--bg-page) 92%, transparent);
-  backdrop-filter: blur(var(--blur-glass-heavy));
-  -webkit-backdrop-filter: blur(var(--blur-glass-heavy));
+  /* Solid, not translucent: without a blur behind it, a see-through bar would
+     let the scrolling photo feed show through, and post captions were
+     legible straight through the old glass version of this bar. Page-toned
+     rather than --bg-card so the bar reads as part of the page chrome. */
+  background: var(--bg-page);
   border-top: 1px solid var(--glass-border);
 
   /* Clears the iOS home indicator so the last tab is not half under it. */
@@ -51,7 +49,7 @@
   width: var(--space-6);
   height: 2px;
   border-radius: var(--radius-pill);
-  background: var(--gradient-accent);
+  background: var(--accent-primary);
 }
 
 .tabbar__icon {

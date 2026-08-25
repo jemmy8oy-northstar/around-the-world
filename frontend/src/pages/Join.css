@@ -49,7 +49,7 @@
   height: 3px;
   margin: var(--space-4) auto 0;
   border-radius: var(--radius-pill);
-  background: var(--gradient-accent);
+  background: var(--accent-primary);
 }
 
 .join__blurb {
@@ -123,7 +123,7 @@
 /* Squared to a ticket rather than a pill — the pill is the other half of the
    generated-app tell, and a boarding pass has corners. */
 .join__submit {
-  background: var(--gradient-accent);
+  background: var(--accent-primary);
   color: var(--accent-contrast);
   border: none;
   border-radius: var(--radius-md);
@@ -142,7 +142,7 @@
 }
 
 .join__submit:hover:not(:disabled) {
-  box-shadow: var(--shadow-glow);
+  box-shadow: var(--shadow-2);
 }
 
 .join__submit:active:not(:disabled) {

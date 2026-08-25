@@ -75,10 +75,38 @@
 
 .post__meta {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-2);
+}
+
+/* Pushes the time and the options menu to the right, leaving the author and any
+   badge on the left. */
+.post__time {
+  margin-left: auto;
+}
+
+/* Admin-only: this author is hidden from everyone else's feed. Marked rather
+   than styled away entirely, because the admin needs to find the post to lift
+   the ban. */
+.post--shadow-banned {
+  border-color: var(--warning);
+}
+
+.post--shadow-banned .post__photo-frame {
+  opacity: 0.55;
+}
+
+.post__hidden-badge {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .post__author {

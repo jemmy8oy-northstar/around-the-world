@@ -6,6 +6,7 @@ const VALID = {
   refreshToken: "refresh",
   userId: "a3f",
   username: "Dave",
+  isAdmin: false,
 };
 
 describe("tokenStorage", () => {
@@ -18,6 +19,28 @@ describe("tokenStorage", () => {
 
   it("returns null when nothing is stored", () => {
     expect(readSession()).toBeNull();
+  });
+
+  it("round-trips the admin flag", () => {
+    writeSession({ ...VALID, username: "james", isAdmin: true });
+    expect(readSession()?.isAdmin).toBe(true);
+  });
+
+  it("reads a session stored before the admin flag existed as not an admin", () => {
+    // Anyone who joined during the practice week has a session with no isAdmin
+    // at all. `undefined` must land as false rather than leaking into a
+    // truthiness check and drawing a tab whose buttons all 403.
+    window.localStorage.setItem(
+      "atw.session",
+      JSON.stringify({
+        accessToken: "a",
+        refreshToken: "r",
+        userId: "u",
+        username: "Dave",
+      }),
+    );
+
+    expect(readSession()?.isAdmin).toBe(false);
   });
 
   it("clears", () => {

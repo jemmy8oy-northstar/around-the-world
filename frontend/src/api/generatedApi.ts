@@ -74,6 +74,12 @@ const injectedRtkApi = api.injectEndpoints({
         body: queryArg.updateCutoversRequest,
       }),
     }),
+    getShadowBannedUsers: build.query<
+      GetShadowBannedUsersApiResponse,
+      GetShadowBannedUsersApiArg
+    >({
+      query: () => ({ url: `/api/admin/users/banned` }),
+    }),
     setShadowBan: build.mutation<SetShadowBanApiResponse, SetShadowBanApiArg>({
       query: (queryArg) => ({
         url: `/api/admin/users/${queryArg.username}/ban`,
@@ -145,6 +151,8 @@ export type UpdateCutoversApiResponse = unknown;
 export type UpdateCutoversApiArg = {
   updateCutoversRequest: UpdateCutoversRequest;
 };
+export type GetShadowBannedUsersApiResponse = /** status 200 OK */ string[];
+export type GetShadowBannedUsersApiArg = void;
 export type SetShadowBanApiResponse = unknown;
 export type SetShadowBanApiArg = {
   username: string;
@@ -180,6 +188,7 @@ export type AuthSession = {
   refreshToken: string;
   userId?: string;
   username: string;
+  isAdmin?: boolean;
 };
 export type JoinRequest = {
   partyCode: string;
@@ -225,6 +234,7 @@ export const {
   useAdvancePubStopMutation,
   useStartNewRoundMutation,
   useUpdateCutoversMutation,
+  useGetShadowBannedUsersQuery,
   useSetShadowBanMutation,
   useReleaseUsernameMutation,
   useAdminDeletePostMutation,

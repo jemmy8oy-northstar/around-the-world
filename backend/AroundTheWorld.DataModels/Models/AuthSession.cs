@@ -17,4 +17,11 @@ public class AuthSession : IAuthSession
     public Guid UserId { get; set; }
 
     public required string Username { get; set; }
+
+    /// <summary>
+    /// Whether this session owns the admin surface. Sent so the app can show the
+    /// admin tab without decoding its own token — the token stays the thing the
+    /// server actually trusts, and this is only what the UI draws.
+    /// </summary>
+    public bool IsAdmin { get; set; }
 }

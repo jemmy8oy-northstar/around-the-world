@@ -3,6 +3,7 @@ import { useGetPostsQuery, useDeletePostMutation } from "../api/atwApi";
 import { PostList } from "../components/PostList";
 import { EmptyState } from "../components/EmptyState";
 import { useSession } from "../auth/useSession";
+import { useModeration } from "../auth/useModeration";
 import { countryFlag, countryName } from "../countries/countries";
 import "./CountryFeed.css";
 
@@ -11,6 +12,7 @@ export default function CountryFeed() {
   const session = useSession();
   const { data: posts, isLoading } = useGetPostsQuery({ country: countryCode });
   const [deletePost] = useDeletePostMutation();
+  const { canModerate, shadowBannedUsernames, onShadowBan } = useModeration();
 
   return (
     <div className="countryfeed">
@@ -39,7 +41,10 @@ export default function CountryFeed() {
         <PostList
           posts={posts}
           currentUserId={session?.userId ?? ""}
+          canModerate={canModerate}
+          shadowBannedUsernames={shadowBannedUsernames}
           onDelete={(postId) => deletePost({ postId })}
+          onShadowBan={onShadowBan}
         />
       )}
     </div>

@@ -7,7 +7,25 @@
          it does not fall back to anything when the file is missing, it just 404s. -->
     <link rel="icon" type="image/svg+xml" href="/balenthiran.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Web Template App</title>
+
+    <!-- Colours the phone's own chrome (address bar, task switcher) to match
+         --bg-page, so the app does not sit in a white browser frame. -->
+    <meta name="theme-color" content="#0a0f1a" />
+
+    <!-- Fonts are linked here rather than @import-ed from index.css. An
+         @import inside a stylesheet cannot start downloading until that
+         stylesheet has itself been fetched and parsed, which serialises two
+         round trips before any text can render — on pub wifi that is the
+         difference between a slow app and a blank one. preconnect opens the
+         two Google Fonts connections in parallel with the CSS request. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap"
+    />
+
+    <title>Around the World</title>
   </head>
   <body>
     <div id="root"></div>

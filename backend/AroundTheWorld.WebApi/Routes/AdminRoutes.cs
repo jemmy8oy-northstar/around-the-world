@@ -14,12 +14,15 @@ public static class AdminRoutes
         // have joined the game, so it must not also require a player token.
         var group = parentGroup.MapGroup("/admin")
             .AllowAnonymous()
-            .AddEndpointFilter<AdminKeyEndpointFilter>()
+            .AddEndpointFilter<AdminAccessEndpointFilter>()
             .WithTags("Admin");
 
         group.MapPost("/stop/next", AdvanceStop).WithName("AdvancePubStop");
         group.MapPost("/round", StartRound).WithName("StartNewRound");
         group.MapPut("/settings", UpdateCutovers).WithName("UpdateCutovers");
+        group.MapGet("/users/banned", GetShadowBanned)
+            .WithName("GetShadowBannedUsers")
+            .WithSummary("The usernames currently shadow-banned, so the admin can see and lift a ban.");
         group.MapPost("/users/{username}/ban", SetShadowBan).WithName("SetShadowBan");
         group.MapPost("/users/{username}/release", ReleaseUsername).WithName("ReleaseUsername");
         group.MapDelete("/posts/{postId:guid}", DeleteAnyPost).WithName("AdminDeletePost");
@@ -46,6 +49,11 @@ public static class AdminRoutes
         await gameSettingsService.UpdateCutoversAsync(request.GoLiveAt, request.ReadOnlyAt, cancellationToken);
         return TypedResults.NoContent();
     }
+
+    private static async Task<Ok<List<string>>> GetShadowBanned(
+        IUserModerationService userModerationService,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok((await userModerationService.GetShadowBannedAsync(cancellationToken)).ToList());
 
     private static async Task<NoContent> SetShadowBan(
         string username,

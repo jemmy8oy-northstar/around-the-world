@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   useAdvancePubStopMutation,
   useGetGameStateQuery,
@@ -8,22 +8,42 @@ import {
   useUpdateCutoversMutation,
 } from "../api/atwApi";
 import { problemDetail } from "../api/problemDetail";
+import { AppShell } from "../components/AppShell";
+import { useSession } from "../auth/useSession";
+import { toLocalInputValue } from "./adminTime";
 import "./Admin.css";
 
 const ADMIN_KEY_STORAGE = "atw.adminKey";
 
 /**
- * The hidden control panel. Unlisted in the tab bar and gated on the admin key,
- * which is held in sessionStorage rather than localStorage so it does not linger
- * on a phone that gets handed round.
+ * The control panel. The admin reaches it from their own tab and is already
+ * authorised by their token; anyone else needs the shared key, which is held in
+ * sessionStorage rather than localStorage so it does not linger on a phone that
+ * gets handed round.
  */
 export default function Admin() {
+  const session = useSession();
   const [adminKey, setAdminKey] = useState(
     () => window.sessionStorage.getItem(ADMIN_KEY_STORAGE) ?? "",
   );
   const [unlocked, setUnlocked] = useState(
     () => !!window.sessionStorage.getItem(ADMIN_KEY_STORAGE),
   );
+
+  // The admin's own token already opens every route here, so asking them for a
+  // second secret would be theatre — and the one they would have to type is the
+  // one nobody remembers at the sixth pub.
+  //
+  // Wrapped in the shell because they arrive by tapping a tab: without it the
+  // tab bar vanishes on the one page whose whole purpose is to be dipped into
+  // and left again, stranding them on a back button.
+  if (session?.isAdmin) {
+    return (
+      <AppShell>
+        <AdminPanel onLock={null} />
+      </AppShell>
+    );
+  }
 
   if (!unlocked) {
     return (
@@ -62,7 +82,7 @@ export default function Admin() {
   );
 }
 
-function AdminPanel({ onLock }: { onLock: () => void }) {
+function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
   const { data: game } = useGetGameStateQuery();
   const [advanceStop] = useAdvancePubStopMutation();
   const [startRound] = useStartNewRoundMutation();
@@ -74,6 +94,26 @@ function AdminPanel({ onLock }: { onLock: () => void }) {
   const [goLiveAt, setGoLiveAt] = useState("");
   const [readOnlyAt, setReadOnlyAt] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+
+  // Both boxes used to start blank, so the one screen that owns the cutovers was
+  // also the one place you could not read them. Seeded from the game state the
+  // moment it arrives — and only then, so it does not fight the admin's typing.
+  useEffect(() => {
+    if (!game?.goLiveAt || !game?.readOnlyAt) return;
+    setGoLiveAt((current) => current || toLocalInputValue(game.goLiveAt));
+    setReadOnlyAt((current) => current || toLocalInputValue(game.readOnlyAt));
+  }, [game?.goLiveAt, game?.readOnlyAt]);
+
+  // Resetting the round archives everyone's photos. In Practice that is the
+  // point — it is how the build week's test posts get cleared before the real
+  // thing. From go-live onwards it is only ever a mis-tap in a dark pub, so it
+  // is not rendered at all: James asked for it to disappear rather than sit
+  // behind a disclosure, and a control you cannot see cannot be fat-fingered.
+  //
+  // The way back, if the night ever genuinely needs one: push "Go live" forward
+  // on this same page, which returns the game to Practice and brings the button
+  // back. So the escape hatch is here, not in a curl command.
+  const roundResetVisible = game?.mode === "Practice";
 
   async function run(
     label: string,
@@ -94,9 +134,11 @@ function AdminPanel({ onLock }: { onLock: () => void }) {
     <div className="admin">
       <div className="admin__header">
         <h1 className="admin__title">Admin</h1>
-        <button className="admin__lock" type="button" onClick={onLock}>
-          Lock
-        </button>
+        {onLock && (
+          <button className="admin__lock" type="button" onClick={onLock}>
+            Lock
+          </button>
+        )}
       </div>
 
       <div className="admin__status">
@@ -121,23 +163,28 @@ function AdminPanel({ onLock }: { onLock: () => void }) {
         >
           🍺 Next pub
         </button>
-        <button
-          className="admin__danger"
-          type="button"
-          onClick={() =>
-            run(
-              "New round",
-              () => startRound({ startRoundRequest: {} }).unwrap(),
-              "Start a new round? The current feed is archived and everyone starts fresh.",
-            )
-          }
-        >
-          Start a new round
-        </button>
+        {roundResetVisible && (
+          <button
+            className="admin__danger"
+            type="button"
+            onClick={() =>
+              run(
+                "New round",
+                () => startRound({ startRoundRequest: {} }).unwrap(),
+                "Start a new round? The current feed is archived and everyone starts fresh.",
+              )
+            }
+          >
+            Start a new round
+          </button>
+        )}
       </section>
 
       <section className="admin__section">
         <h2 className="admin__heading">Cutovers</h2>
+        <p className="admin__hint">
+          Shown and entered in your phone's timezone — UK time on the night.
+        </p>
         <label className="admin__label" htmlFor="goLiveAt">
           Go live
         </label>

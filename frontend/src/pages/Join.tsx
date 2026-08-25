@@ -35,6 +35,7 @@ export default function Join() {
           refreshToken: result.refreshToken,
           userId: result.userId ?? "",
           username: result.username,
+          isAdmin: result.isAdmin === true,
         }),
       );
 

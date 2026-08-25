@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "qSPwjQjBD1w=",
+  "success": true,
+  "projectFilePath": "/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/AroundTheWorld.Abstractions.csproj",
+  "expectedPackageFiles": [
+    "/data/home/.nuget/packages/stylecop.analyzers/1.2.0-beta.556/stylecop.analyzers.1.2.0-beta.556.nupkg.sha512",
+    "/data/home/.nuget/packages/stylecop.analyzers.unstable/1.2.0.556/stylecop.analyzers.unstable.1.2.0.556.nupkg.sha512"
+  ],
+  "logs": []
+}

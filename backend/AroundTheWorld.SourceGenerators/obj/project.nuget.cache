@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "dgSpecHash": "Z+b6asmp9wQ=",
+  "success": true,
+  "projectFilePath": "/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/AroundTheWorld.SourceGenerators.csproj",
+  "expectedPackageFiles": [
+    "/data/home/.nuget/packages/microsoft.codeanalysis.analyzers/3.11.0/microsoft.codeanalysis.analyzers.3.11.0.nupkg.sha512",
+    "/data/home/.nuget/packages/microsoft.codeanalysis.common/4.14.0/microsoft.codeanalysis.common.4.14.0.nupkg.sha512",
+    "/data/home/.nuget/packages/microsoft.codeanalysis.csharp/4.14.0/microsoft.codeanalysis.csharp.4.14.0.nupkg.sha512",
+    "/data/home/.nuget/packages/microsoft.netcore.platforms/1.1.0/microsoft.netcore.platforms.1.1.0.nupkg.sha512",
+    "/data/home/.nuget/packages/netstandard.library/2.0.3/netstandard.library.2.0.3.nupkg.sha512",
+    "/data/home/.nuget/packages/stylecop.analyzers/1.2.0-beta.556/stylecop.analyzers.1.2.0-beta.556.nupkg.sha512",
+    "/data/home/.nuget/packages/stylecop.analyzers.unstable/1.2.0.556/stylecop.analyzers.unstable.1.2.0.556.nupkg.sha512",
+    "/data/home/.nuget/packages/system.buffers/4.5.1/system.buffers.4.5.1.nupkg.sha512",
+    "/data/home/.nuget/packages/system.collections.immutable/9.0.0/system.collections.immutable.9.0.0.nupkg.sha512",
+    "/data/home/.nuget/packages/system.memory/4.5.5/system.memory.4.5.5.nupkg.sha512",
+    "/data/home/.nuget/packages/system.numerics.vectors/4.5.0/system.numerics.vectors.4.5.0.nupkg.sha512",
+    "/data/home/.nuget/packages/system.reflection.metadata/9.0.0/system.reflection.metadata.9.0.0.nupkg.sha512",
+    "/data/home/.nuget/packages/system.runtime.compilerservices.unsafe/6.0.0/system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
+    "/data/home/.nuget/packages/system.text.encoding.codepages/7.0.0/system.text.encoding.codepages.7.0.0.nupkg.sha512",
+    "/data/home/.nuget/packages/system.threading.tasks.extensions/4.5.4/system.threading.tasks.extensions.4.5.4.nupkg.sha512"
+  ],
+  "logs": []
+}

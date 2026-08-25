@@ -1,0 +1,11 @@
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/bin/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.deps.json
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/bin/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.dll
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/bin/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.pdb
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/obj/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.csproj.AssemblyReference.cache
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/obj/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.GeneratedMSBuildEditorConfig.editorconfig
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/obj/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.AssemblyInfoInputs.cache
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/obj/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.AssemblyInfo.cs
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/obj/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.csproj.CoreCompileInputs.cache
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/obj/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.sourcelink.json
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/obj/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.dll
+/data/repos/around-the-world/backend/AroundTheWorld.SourceGenerators/obj/Debug/netstandard2.0/AroundTheWorld.SourceGenerators.pdb

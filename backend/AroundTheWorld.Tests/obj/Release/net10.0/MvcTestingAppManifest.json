@@ -1,0 +1,9 @@
+{
+  "AroundTheWorld.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/data\/repos\/around-the-world\/backend\/AroundTheWorld.Abstractions",
+  "AroundTheWorld.Database, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/data\/repos\/around-the-world\/backend\/AroundTheWorld.Database",
+  "AroundTheWorld.DataModels, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/data\/repos\/around-the-world\/backend\/AroundTheWorld.DataModels",
+  "AroundTheWorld.DomainModels, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/data\/repos\/around-the-world\/backend\/AroundTheWorld.DomainModels",
+  "AroundTheWorld.EntityModels, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/data\/repos\/around-the-world\/backend\/AroundTheWorld.EntityModels",
+  "AroundTheWorld.Services, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/data\/repos\/around-the-world\/backend\/AroundTheWorld.Services",
+  "AroundTheWorld.WebApi, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "\/data\/repos\/around-the-world\/backend\/AroundTheWorld.WebApi"
+}

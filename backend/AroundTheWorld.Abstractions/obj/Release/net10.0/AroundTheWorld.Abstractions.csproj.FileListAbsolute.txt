@@ -1,0 +1,12 @@
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/bin/Release/net10.0/AroundTheWorld.Abstractions.deps.json
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/bin/Release/net10.0/AroundTheWorld.Abstractions.dll
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/bin/Release/net10.0/AroundTheWorld.Abstractions.pdb
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/AroundTheWorld.Abstractions.GeneratedMSBuildEditorConfig.editorconfig
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/AroundTheWorld.Abstractions.AssemblyInfoInputs.cache
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/AroundTheWorld.Abstractions.AssemblyInfo.cs
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/AroundTheWorld.Abstractions.csproj.CoreCompileInputs.cache
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/AroundTheWorld.Abstractions.sourcelink.json
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/AroundTheWorld.Abstractions.dll
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/refint/AroundTheWorld.Abstractions.dll
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/AroundTheWorld.Abstractions.pdb
+/data/repos/around-the-world/backend/AroundTheWorld.Abstractions/obj/Release/net10.0/ref/AroundTheWorld.Abstractions.dll

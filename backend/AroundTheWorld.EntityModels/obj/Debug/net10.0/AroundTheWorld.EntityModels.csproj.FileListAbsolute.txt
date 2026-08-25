@@ -1,0 +1,13 @@
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/bin/Debug/net10.0/AroundTheWorld.EntityModels.deps.json
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/bin/Debug/net10.0/AroundTheWorld.EntityModels.dll
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/bin/Debug/net10.0/AroundTheWorld.EntityModels.pdb
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/AroundTheWorld.EntityModels.csproj.AssemblyReference.cache
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/AroundTheWorld.EntityModels.GeneratedMSBuildEditorConfig.editorconfig
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/AroundTheWorld.EntityModels.AssemblyInfoInputs.cache
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/AroundTheWorld.EntityModels.AssemblyInfo.cs
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/AroundTheWorld.EntityModels.csproj.CoreCompileInputs.cache
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/AroundTheWorld.EntityModels.sourcelink.json
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/AroundTheWorld.EntityModels.dll
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/refint/AroundTheWorld.EntityModels.dll
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/AroundTheWorld.EntityModels.pdb
+/data/repos/around-the-world/backend/AroundTheWorld.EntityModels/obj/Debug/net10.0/ref/AroundTheWorld.EntityModels.dll

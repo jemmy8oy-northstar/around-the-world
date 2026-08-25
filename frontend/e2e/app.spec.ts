@@ -271,9 +271,32 @@ test.describe("the admin", () => {
       page.getByRole("menuitem", { name: "Delete this post" }),
     ).toBeVisible();
     // Priya is in the banned fixture, so the offer is to lift it.
-    await expect(
-      page.getByRole("menuitem", { name: "Un-hide Priya" }),
-    ).toBeVisible();
+    const unhide = page.getByRole("menuitem", { name: "Un-hide Priya" });
+    await expect(unhide).toBeVisible();
+
+    // ...and then again, properly. The card used to be overflow: hidden and
+    // cropped its own menu, so the admin saw the first item and nothing else.
+    // Neither toBeVisible nor toBeInViewport caught that — both were measured
+    // against the bug and both passed, because a clipped element still has a
+    // layout box and IntersectionObserver did not report it as hidden either.
+    // Asking the document what is actually painted at that point does catch it.
+    // Two details, both learned the hard way against the real bug:
+    //  - getBoundingClientRect, not Playwright's boundingBox(). The former is
+    //    viewport-relative and so is elementFromPoint; the latter is
+    //    page-relative, and mixing them probes the wrong pixel once scrolled.
+    //  - compare element IDENTITY, not text. A clipped item's hit test returns
+    //    an ancestor container, and that container's textContent contains the
+    //    item's own label — so a `toContain` check passes over the bug.
+    const reachable = await unhide.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        rect.x + rect.width / 2,
+        rect.y + rect.height / 2,
+      );
+      return hit !== null && (hit === element || element.contains(hit));
+    });
+
+    expect(reachable).toBe(true);
 
     await page.screenshot({
       path: "e2e/screenshots/admin-post-options.png",

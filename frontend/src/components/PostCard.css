@@ -2,13 +2,31 @@
   background: var(--bg-card);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  overflow: hidden;
   box-shadow: var(--shadow-1);
+
+  /* Deliberately NOT overflow: hidden. It used to be, to clip the photo to the
+     rounded corners — but the options menu is absolutely positioned inside this
+     card, so the card was cropping its own popup: the admin saw the first menu
+     item and nothing else. The clipping now lives on the photo frame, which is
+     the only child that actually needs it.
+
+     Worth knowing what did and did not catch it. toBeVisible() passed over the
+     bug, and so did toBeInViewport() — a clipped element still reports a layout
+     box. Only a hit test at the item's own centre sees it, and it has to
+     compare element identity rather than text, because the ancestor returned by
+     a clipped hit test contains the item's own label. The regression test in
+     e2e/app.spec.ts does exactly that and is verified red against this line. */
+  overflow: visible;
 }
 
 .post__photo-frame {
   position: relative;
   width: 100%;
+
+  /* Clips the photo to the card's top corners, which is what .post's
+     overflow: hidden used to do for the whole card. */
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  overflow: hidden;
 
   /* An explicit height rather than aspect-ratio + max-height: capping the height
      of an aspect-ratio box makes it shrink its WIDTH to keep the ratio, which

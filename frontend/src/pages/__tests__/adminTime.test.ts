@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { toLocalInputValue } from "../adminTime";
 
 /**
@@ -16,14 +16,12 @@ import { toLocalInputValue } from "../adminTime";
  * used (28 August is inside BST, UTC+1), and the expectations are literal
  * strings rather than round-trips through the code under test.
  */
-const REAL_TZ = process.env.TZ;
-
 beforeAll(() => {
-  process.env.TZ = "Europe/London";
+  vi.stubEnv("TZ", "Europe/London");
 });
 
 afterAll(() => {
-  process.env.TZ = REAL_TZ;
+  vi.unstubAllEnvs();
 });
 
 describe("toLocalInputValue, on a phone in the UK on the night", () => {

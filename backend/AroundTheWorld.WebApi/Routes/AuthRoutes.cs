@@ -14,9 +14,9 @@ public static class AuthRoutes
 
         group.MapPost("/join", Join)
             .WithName("Join")
-            .WithSummary("Exchange the party code and a username for a token pair.")
+            .WithSummary("Exchange a username for a token pair. The host's name also needs the host code.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPost("/refresh", Refresh)

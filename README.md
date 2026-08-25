@@ -21,7 +21,7 @@ How the build went, and what to fix in `web-template`: [`docs/build-log.md`](doc
 
 | | |
 |---|---|
-| **Getting in** | One shared party code, then pick a username. No email, no password. |
+| **Getting in** | Pick a username. No code, no email, no password. (The host's name is the exception — it still needs the code, because admin is granted by username.) |
 | **Posting** | Camera → caption → country. Photos are resized in the browser before upload. |
 | **Feed** | Newest first, grouped under pub-stop dividers. |
 | **Map** | One numbered badge per country; tap it for that country's drinks. |
@@ -73,8 +73,9 @@ cd backend && dotnet ef database update \
   --startup-project AroundTheWorld.WebApi
 ```
 
-The first run seeds the settings row and Round 1 automatically — party code
-`260802`, go-live 28 Aug 2026 17:00 BST, read-only 29 Aug 05:00 BST.
+The first run seeds the settings row and Round 1 automatically — host code
+`260802` (needed only to claim the host's name), go-live 28 Aug 2026 17:00 BST,
+read-only 29 Aug 05:00 BST.
 
 ### 2. Run
 

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useDispatch } from "react-redux";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useJoinMutation } from "../api/atwApi";
@@ -7,6 +7,20 @@ import { useSession } from "../auth/useSession";
 import { problemDetail } from "../api/problemDetail";
 import "./Join.css";
 
+/**
+ * The API answers a name that needs the host code with 403, and that is the only
+ * 403 this endpoint can produce — a taken name is 409 and a malformed one is
+ * 400. So it is safe to key the extra field off the status alone rather than
+ * string-matching the message, which would break the first time the copy moved.
+ */
+function needsHostCode(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { status?: unknown }).status === 403
+  );
+}
+
 export default function Join() {
   const session = useSession();
   const dispatch = useDispatch();
@@ -14,9 +28,17 @@ export default function Join() {
   const location = useLocation();
   const [join, { isLoading }] = useJoinMutation();
 
-  const [partyCode, setPartyCode] = useState("");
   const [username, setUsername] = useState("");
+  const [hostCode, setHostCode] = useState("");
+  const [askForHostCode, setAskForHostCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hostCodeRef = useRef<HTMLInputElement>(null);
+
+  // Focus the code field the moment it appears, so the host starts typing
+  // instead of hunting for what just changed on the screen.
+  useEffect(() => {
+    if (askForHostCode) hostCodeRef.current?.focus();
+  }, [askForHostCode]);
 
   if (session) return <Navigate to="/" replace />;
 
@@ -26,7 +48,9 @@ export default function Join() {
 
     try {
       const result = await join({
-        joinRequest: { partyCode, username },
+        // Sent only once the API has asked for it. A guest never types a code
+        // and never sends one.
+        joinRequest: { username, partyCode: askForHostCode ? hostCode : null },
       }).unwrap();
 
       dispatch(
@@ -42,6 +66,8 @@ export default function Join() {
       const from = (location.state as { from?: string } | null)?.from;
       navigate(from ?? "/", { replace: true });
     } catch (caught) {
+      if (needsHostCode(caught)) setAskForHostCode(true);
+
       setError(
         problemDetail(caught) ?? "That didn't work — give it another go.",
       );
@@ -60,20 +86,6 @@ export default function Join() {
       </p>
 
       <form className="join__form" onSubmit={onSubmit}>
-        <label className="join__label" htmlFor="partyCode">
-          Party code
-        </label>
-        <input
-          id="partyCode"
-          className="join__input join__input--code"
-          value={partyCode}
-          onChange={(e) => setPartyCode(e.target.value)}
-          placeholder="000000"
-          inputMode="numeric"
-          autoComplete="off"
-          required
-        />
-
         <label className="join__label" htmlFor="username">
           Your name
         </label>
@@ -82,11 +94,33 @@ export default function Join() {
           className="join__input"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="What should we call you?"
+          placeholder="This will appear above your posts"
           autoComplete="off"
           maxLength={32}
           required
+          autoFocus
         />
+
+        {/* Never rendered for a guest. It appears only after the API refuses a
+            name as the host's, which is the one case a code is still read. */}
+        {askForHostCode && (
+          <>
+            <label className="join__label" htmlFor="hostCode">
+              Host code
+            </label>
+            <input
+              id="hostCode"
+              ref={hostCodeRef}
+              className="join__input join__input--code"
+              value={hostCode}
+              onChange={(e) => setHostCode(e.target.value)}
+              placeholder="000000"
+              inputMode="numeric"
+              autoComplete="off"
+              required
+            />
+          </>
+        )}
 
         {error && (
           <p className="join__error" role="alert">

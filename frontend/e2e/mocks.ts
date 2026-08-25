@@ -99,9 +99,33 @@ export async function mockApi(
     }),
   );
 
-  await page.route("**/api/auth/join", (route) =>
-    route.fulfill({ json: SESSION }),
-  );
+  // Mirrors the real endpoint rather than always saying yes: a guest joins on a
+  // name alone, and the host's name is refused with 403 until the code comes
+  // with it. A mock that accepted everything would let the join screen drop the
+  // host gate entirely and still pass.
+  await page.route("**/api/auth/join", (route) => {
+    const body = route.request().postDataJSON() as {
+      username?: string;
+      partyCode?: string | null;
+    };
+    const isHost = (body?.username ?? "").trim().toLowerCase() === "james";
+
+    if (isHost && body?.partyCode?.trim() !== "260802") {
+      return route.fulfill({
+        status: 403,
+        contentType: "application/problem+json",
+        json: {
+          status: 403,
+          title: "Forbidden",
+          detail: "That name is the host's. Enter the host code to claim it.",
+        },
+      });
+    }
+
+    return route.fulfill({
+      json: isHost ? { ...SESSION, username: "james", isAdmin: true } : SESSION,
+    });
+  });
   await page.route("**/api/auth/refresh", (route) =>
     route.fulfill({ json: SESSION }),
   );

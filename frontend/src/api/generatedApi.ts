@@ -191,7 +191,7 @@ export type AuthSession = {
   isAdmin?: boolean;
 };
 export type JoinRequest = {
-  partyCode: string;
+  partyCode?: null | string;
   username: string;
 };
 export type RefreshRequest = {

@@ -54,7 +54,7 @@
         "tags": [
           "AuthRoutes"
         ],
-        "summary": "Exchange the party code and a username for a token pair.",
+        "summary": "Exchange a username for a token pair. The host's name also needs the host code.",
         "operationId": "Join",
         "requestBody": {
           "content": {
@@ -87,8 +87,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -603,13 +603,15 @@
       },
       "JoinRequest": {
         "required": [
-          "partyCode",
           "username"
         ],
         "type": "object",
         "properties": {
           "partyCode": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "username": {
             "type": "string"

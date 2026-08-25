@@ -11,14 +11,25 @@ import { mockApi, signIn, signInAsAdmin } from "./mocks";
 test.describe("joining", () => {
   test.beforeEach(async ({ page }) => mockApi(page));
 
-  test("the join screen asks for a code and a name", async ({ page }) => {
+  test("the join screen asks for a name and nothing else", async ({ page }) => {
     await page.goto("./join");
 
     await expect(
       page.getByRole("heading", { name: "Around the World" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Party code")).toBeVisible();
     await expect(page.getByLabel("Your name")).toBeVisible();
+
+    // The name field says what the name is FOR, not "what should we call you?" —
+    // people pick a better name when they know it goes above every post.
+    await expect(page.getByLabel("Your name")).toHaveAttribute(
+      "placeholder",
+      "This will appear above your posts",
+    );
+
+    // No code, for anybody. Asserted by absence because that is the change:
+    // a field that is merely optional would still pass a "name is visible" test.
+    await expect(page.getByLabel("Party code")).toHaveCount(0);
+    await expect(page.getByLabel("Host code")).toHaveCount(0);
 
     await page.screenshot({ path: "e2e/screenshots/join.png", fullPage: true });
   });
@@ -32,13 +43,50 @@ test.describe("joining", () => {
   test("joining lands you on the feed", async ({ page }) => {
     await page.goto("./join");
 
-    await page.getByLabel("Party code").fill("260802");
     await page.getByLabel("Your name").fill("Dave");
     await page.getByRole("button", { name: "Let's go" }).click();
 
     await expect(
       page.getByText("Guinness, obviously. Setting the tone."),
     ).toBeVisible();
+  });
+
+  test("the host's name asks for the code, and the code lets him in", async ({
+    page,
+  }) => {
+    await page.goto("./join");
+
+    await page.getByLabel("Your name").fill("james");
+    await page.getByRole("button", { name: "Let's go" }).click();
+
+    // Refused, and the field it needs appears rather than being on the screen
+    // for every guest all night.
+    await expect(page.getByRole("alert")).toHaveText(/host code/i);
+    await expect(page.getByLabel("Host code")).toBeVisible();
+
+    await page.screenshot({
+      path: "e2e/screenshots/join-host-code.png",
+      fullPage: true,
+    });
+
+    await page.getByLabel("Host code").fill("260802");
+    await page.getByRole("button", { name: "Let's go" }).click();
+
+    await expect(
+      page.getByText("Guinness, obviously. Setting the tone."),
+    ).toBeVisible();
+  });
+
+  test("the host's name with the wrong code stays out", async ({ page }) => {
+    await page.goto("./join");
+
+    await page.getByLabel("Your name").fill("james");
+    await page.getByRole("button", { name: "Let's go" }).click();
+    await page.getByLabel("Host code").fill("000000");
+    await page.getByRole("button", { name: "Let's go" }).click();
+
+    await expect(page).toHaveURL(/\/join$/);
+    await expect(page.getByRole("alert")).toBeVisible();
   });
 });
 

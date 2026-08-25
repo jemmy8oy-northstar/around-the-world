@@ -1,39 +1,40 @@
 /* IRIS primitive: Card — a pane of glass */
 
 .ui-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(var(--blur-glass));
-    -webkit-backdrop-filter: blur(var(--blur-glass));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    transition: var(--theme-transition),
-        transform var(--duration-base) var(--ease-standard),
-        box-shadow var(--duration-base) var(--ease-standard);
+  background: var(--bg-card);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  transition:
+    var(--theme-transition),
+    transform var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
 }
 
 .ui-card--hover:hover {
-    transform: translateY(-6px);
-    background: var(--glass-hover-bg);
-    border-color: var(--accent-border);
-    box-shadow: var(--shadow-2);
+  transform: translateY(-6px);
+  background: var(--glass-hover-bg);
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-2);
 }
 
 .ui-card__header {
-    padding: var(--space-5) var(--space-5) var(--space-4);
-    border-bottom: 1px solid var(--glass-border);
-    font-family: var(--font-display);
-    font-weight: var(--weight-bold);
-    font-size: var(--text-lg);
-    letter-spacing: var(--tracking-display);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  border-bottom: 1px solid var(--glass-border);
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-display);
 }
 
 .ui-card__body {
-    padding: var(--space-5);
+  padding: var(--space-5);
 }
 
 .ui-card__footer {
-    padding: var(--space-4) var(--space-5);
-    border-top: 1px solid var(--glass-border);
-    color: var(--text-secondary);
-    font-size: var(--text-sm);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }

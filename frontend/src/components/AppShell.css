@@ -1,0 +1,12 @@
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell__main {
+  flex: 1;
+
+  /* Leaves room for the fixed tab bar plus the iOS home indicator. */
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+}

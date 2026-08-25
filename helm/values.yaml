@@ -1,5 +1,6 @@
 # Set this to your app name at scaffold time (e.g. "macro-metrics")
 fullnameOverride: "around-the-world"
+
 ingress:
   enabled: true
   className: nginx
@@ -10,13 +11,15 @@ ingress:
   tls:
     - hosts:
         - balenthiran.co.uk
-      secretName: balenthiran-tls # shared wildcard cert — no per-project TLS setup
-registryPrefix: "lhr.ocir.io/lr7uc6l49odc" # shared OCIR namespace
+      secretName: balenthiran-tls   # shared wildcard cert — no per-project TLS setup
+
+registryPrefix: "lhr.ocir.io/lr7uc6l49odc"  # shared OCIR namespace
+
 apps:
   - name: backend
     image:
-      repository: lhr.ocir.io/lr7uc6l49odc/around-the-world-backend # Update at scaffold time
-      tag: 0.1.0
+      repository: lhr.ocir.io/lr7uc6l49odc/around-the-world-backend   # Update at scaffold time
+      tag: latest
       pullPolicy: Always
     containerPort: 8080
     replicas: 1
@@ -24,16 +27,75 @@ apps:
       port: 80
       targetPort: 8080
     ingress:
-      path: /around-the-world/api # developer replaces 'around-the-world' at scaffold time
+      path: /birthday/api
       pathType: Prefix
     resources: {}
     nodeSelector: {}
     tolerations: []
     affinity: {}
+    env:
+      # The ingress routes /birthday/api here without stripping the prefix, so
+      # the app has to know it is hosted under one. See WebApi/Program.cs.
+      - name: PathBase
+        value: "/birthday"
+      - name: ASPNETCORE_ENVIRONMENT
+        value: "Production"
+
+      # Non-secret object-storage settings. The bucket name and endpoint are not
+      # credentials; only the key pair below is.
+      - name: PhotoStorage__Bucket
+        value: "around-the-world"
+      - name: PhotoStorage__Region
+        value: "uk-london-1"
+      # The OCI tenancy namespace here is the same one `registryPrefix` above
+      # pushes images to. Leaving this empty is NOT a safe default: the backend
+      # treats "any one storage setting missing" as "use the local disk", so an
+      # empty value here silently discards every photo on the next pod restart
+      # even when the access keys are correct. See PhotoStorageOptions.
+      - name: PhotoStorage__ServiceUrl
+        value: "https://lr7uc6l49odc.compat.objectstorage.uk-london-1.oraclecloud.com"
+      # Public bucket URL. Leave empty to proxy photos through the API instead —
+      # which is what a private bucket needs.
+      - name: PhotoStorage__PublicBaseUrl
+        value: ""
+
+      # Secrets. Create with:
+      #   kubectl create secret generic around-the-world-secrets \
+      #     --from-literal=ConnectionStrings__DefaultConnection='Host=...;Database=...;Username=...;Password=...' \
+      #     --from-literal=Jwt__Secret="$(openssl rand -hex 32)" \
+      #     --from-literal=Admin__Key="$(openssl rand -hex 16)" \
+      #     --from-literal=PhotoStorage__AccessKeyId='...' \
+      #     --from-literal=PhotoStorage__SecretAccessKey='...'
+      - name: ConnectionStrings__DefaultConnection
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: ConnectionStrings__DefaultConnection
+      - name: Jwt__Secret
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: Jwt__Secret
+      - name: Admin__Key
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: Admin__Key
+      - name: PhotoStorage__AccessKeyId
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: PhotoStorage__AccessKeyId
+      - name: PhotoStorage__SecretAccessKey
+        valueFrom:
+          secretKeyRef:
+            name: around-the-world-secrets
+            key: PhotoStorage__SecretAccessKey
+
   - name: frontend
     image:
-      repository: lhr.ocir.io/lr7uc6l49odc/around-the-world-frontend # Update at scaffold time
-      tag: 0.1.0
+      repository: lhr.ocir.io/lr7uc6l49odc/around-the-world-frontend   # Update at scaffold time
+      tag: latest
       pullPolicy: Always
     containerPort: 80
     replicas: 1
@@ -41,16 +103,13 @@ apps:
       port: 80
       targetPort: 80
     ingress:
-      path: /around-the-world # developer replaces 'around-the-world' at scaffold time
+      path: /birthday
       pathType: Prefix
     resources: {}
     nodeSelector: {}
     tolerations: []
     affinity: {}
-# App-specific secrets — add per project (none pre-scaffolded):
-# env:
-#   - name: MY_API_KEY
-#     valueFrom:
-#       secretKeyRef:
-#         name: {{ .Values.fullnameOverride }}-secrets
-#         key: MY_API_KEY
+
+# Secrets live in the `around-the-world-secrets` Secret in the target namespace.
+# See the backend app's env block above for the exact kubectl command, and
+# README.md for the OCI Object Storage bucket setup.

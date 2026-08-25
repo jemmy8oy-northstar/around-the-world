@@ -1,12 +1,27 @@
+using System.Text.Json.Serialization;
 using Scalar.AspNetCore;
 using AroundTheWorld.WebApi;
 using AroundTheWorld.WebApi.ExceptionHandling;
 using AroundTheWorld.WebApi.Routes;
+using AroundTheWorld.Abstractions.Services;
 using AroundTheWorld.Database;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddBackendServices(builder.Configuration);
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    // Enums on the wire as names, not ordinals: the generated TypeScript client
+    // gets a "Practice" | "Live" | "Finished" union instead of a bare number, so
+    // the frontend branches on meaning rather than on a magic 2.
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+    // .NET 10 describes int32 as ["integer","string"] by default, because it will
+    // happily read a number from a JSON string. That union propagates into every
+    // integer field of the generated client. We never send numbers as strings.
+    options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
@@ -37,15 +52,47 @@ if (!generatingOpenApiDocument)
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetService<AppDbContext>();
     if (dbContext is null)
+    {
         app.Logger.LogWarning("Skipping database migration — no connection string configured.");
+    }
     else
-        dbContext.Database.Migrate();
+    {
+        // The in-process integration tests swap in the InMemory provider, which
+        // cannot Migrate — see docs/specs/testing-strategy.md.
+        if (dbContext.Database.IsRelational())
+            dbContext.Database.Migrate();
+        else
+            dbContext.Database.EnsureCreated();
+
+        // A fresh database has no settings row and no round, so nothing is
+        // playable until this runs.
+        await scope.ServiceProvider.GetRequiredService<IGameBootstrapper>()
+            .EnsureInitialisedAsync();
+    }
+}
+
+// The ingress routes /birthday/api to this service WITHOUT rewriting the prefix
+// away, so without this every route 404s in the cluster while working perfectly
+// on localhost. Empty in development, set to "/birthday" by the Helm chart.
+var pathBase = builder.Configuration["PathBase"];
+if (!string.IsNullOrWhiteSpace(pathBase))
+{
+    app.UsePathBase(pathBase);
 }
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGroup("/api")
     .MapStatusRoutes()
+    .MapGameRoutes()
+    .MapAuthRoutes()
+    .MapPhotoRoutes()
+    .MapPostRoutes()
+    .MapCountryRoutes()
+    .MapAdminRoutes()
     .WithOpenApi();
 
 app.Run();

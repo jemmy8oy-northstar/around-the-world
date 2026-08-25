@@ -31,15 +31,17 @@ export default defineConfig({
     // Specs therefore navigate with RELATIVE paths ('./', './thing'); a
     // leading slash discards the base again.
     // Rename this alongside `base` when you scaffold a new app.
-    baseURL: 'http://localhost:4173/around-the-world/',
+    baseURL: 'http://localhost:4173/birthday/',
     trace: 'on-first-retry',
   },
+  // This app is mobile-only, so the e2e suite drives a phone viewport. Running
+  // it on Desktop Chrome would exercise a layout no user will ever see.
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile', use: { ...devices['iPhone 13'] } },
   ],
   webServer: {
     command: 'npm run dev -- --port 4173 --strictPort',
-    url: 'http://localhost:4173/around-the-world/',
+    url: 'http://localhost:4173/birthday/',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

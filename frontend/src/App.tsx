@@ -1,38 +1,43 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import './App.css'
-import Navbar from './components/Navbar'
-import Home from './pages/Home'
-import DesignSystem from './pages/DesignSystem'
-import ScrollToTop from './components/ScrollToTop'
-import { ThemeProvider } from './context/ThemeContext'
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AppShell } from "./components/AppShell";
+import { RequireSession } from "./components/RequireSession";
+import Join from "./pages/Join";
+import Feed from "./pages/Feed";
+import WorldMap from "./pages/WorldMap";
+import Compose from "./pages/Compose";
+import Board from "./pages/Board";
+import CountryFeed from "./pages/CountryFeed";
+import Admin from "./pages/Admin";
 
-function App() {
+export default function App() {
   return (
-    <ThemeProvider>
-      <Router basename={import.meta.env.BASE_URL}>
-        <ScrollToTop />
-        <div className="app-container">
-          <Navbar />
-          <main>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/design" element={<DesignSystem />} />
-            </Routes>
-          </main>
-          <footer className="container" style={{
-            padding: '64px 0',
-            borderTop: '1px solid var(--glass-border)',
-            marginTop: '120px',
-            textAlign: 'center',
-            color: 'var(--text-secondary)',
-            fontSize: '0.9rem'
-          }}>
-            <p>© {new Date().getFullYear()} Your Name Here.</p>
-          </footer>
-        </div>
-      </Router>
-    </ThemeProvider>
-  )
-}
+    <Router basename={import.meta.env.BASE_URL}>
+      <Routes>
+        <Route path="/join" element={<Join />} />
 
-export default App
+        {/* Unlisted and key-gated — deliberately outside the tab shell. */}
+        <Route path="/admin" element={<Admin />} />
+
+        <Route
+          path="*"
+          element={
+            <RequireSession>
+              <AppShell>
+                <Routes>
+                  <Route path="/" element={<Feed />} />
+                  <Route path="/map" element={<WorldMap />} />
+                  <Route path="/post" element={<Compose />} />
+                  <Route path="/board" element={<Board />} />
+                  <Route
+                    path="/country/:countryCode"
+                    element={<CountryFeed />}
+                  />
+                </Routes>
+              </AppShell>
+            </RequireSession>
+          }
+        />
+      </Routes>
+    </Router>
+  );
+}

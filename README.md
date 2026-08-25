@@ -1,312 +1,192 @@
-# Personal Web Template
+# Around the World 🌍🍻
 
-A high-performance monorepo template for .NET backends and React frontends, built on Clean Architecture principles.
+A mobile-only photo game for a birthday pub crawl. You drink something from a
+different country at every stop, photograph it, caption it, and tag where the
+drink is from. The group gets a shared chronological feed and a world map that
+fills up as the night goes on.
 
-## Stack
+**Live at:** `balenthiran.co.uk/birthday`
 
-- **Backend**: .NET 10, Entity Framework Core, PostgreSQL, Scalar/OpenAPI
-- **Frontend**: React, Vite, TypeScript, Redux Toolkit + RTK Query
-- **Infrastructure**: Docker, Helm, Kubernetes
+> The country tag is **where the drink is from, not where the drinker is**. That
+> is the whole conceit of an around-the-world crawl, and it means there is no
+> geolocation anywhere in this app — no permission prompt, no GPS handling, no
+> privacy surface. Country comes from a picker.
 
-## Prerequisites
+Full design record: [`docs/spec.md`](docs/spec.md).
+How the build went, and what to fix in `web-template`: [`docs/build-log.md`](docs/build-log.md).
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20+](https://nodejs.org/)
-- [PostgreSQL](https://www.postgresql.org/) (local or Docker)
-- `dotnet new` CLI
+---
 
-## Creating a New Project
+## How it plays
 
-### 1. Install the Template
+| | |
+|---|---|
+| **Getting in** | One shared party code, then pick a username. No email, no password. |
+| **Posting** | Camera → caption → country. Photos are resized in the browser before upload. |
+| **Feed** | Newest first, grouped under pub-stop dividers. |
+| **Map** | One numbered badge per country; tap it for that country's drinks. |
+| **Board** | Countries ranked by how many drinks came from them. |
+| **Admin** | Hidden page: next pub, new round, shadow ban, release a name, move the cutovers. |
 
-```bash
-dotnet new install /path/to/web-template
-```
+### The three modes
 
-Or once published to NuGet:
-
-```bash
-dotnet new install Balenthiran.WebTemplate
-```
-
-### 2. Scaffold Your Project
-
-Pass your solution name as `Company.ProjectName`:
-
-```bash
-dotnet new web-template -n Balenthiran.Apeify
-```
-
-This will generate:
+Mode is derived from two timestamps on **every request** — there is no scheduled
+job and no redeploy involved, and both timestamps are editable from the admin
+page.
 
 ```
-Balenthiran.Apeify/
-├── backend/
-│   ├── Balenthiran.Apeify.Abstractions/
-│   ├── Balenthiran.Apeify.DataModels/
-│   ├── Balenthiran.Apeify.DomainModels/
-│   ├── Balenthiran.Apeify.EntityModels/
-│   ├── Balenthiran.Apeify.Services/
-│   ├── Balenthiran.Apeify.Database/
-│   ├── Balenthiran.Apeify.WebApi/
-│   └── Balenthiran.Apeify.slnx
-├── frontend/
-├── scripts/
-├── helm/
-└── deploy.sh
+now < GoLiveAt                 →  Practice   postable, banner says "practice"
+GoLiveAt <= now < ReadOnlyAt   →  Live       the real thing
+now >= ReadOnlyAt              →  Finished   read-only keepsake
 ```
 
-### 3. Run the Onboarding Script
+---
 
-```bash
-cd Balenthiran.Apeify
-node scripts/init.mjs
-```
+## Running locally
 
-This will:
-- Prompt for your PostgreSQL connection details
-- Generate `appsettings.Development.json` with a fresh JWT secret
-- Generate `frontend/.env` with a unique project ID
-- Run `dotnet restore` and `npm install`
+You need [.NET 10](https://dotnet.microsoft.com/download),
+[Node 20+](https://nodejs.org/) and PostgreSQL.
 
-### 4. Apply the Initial Migration
+**No OCI credentials are needed.** Without them the app writes photos to a local
+`photo-store/` directory and serves them back, so everything works end to end.
 
-```bash
-cd backend
-dotnet ef database update --project Balenthiran.Apeify.Database --startup-project Balenthiran.Apeify.WebApi
-```
+### 1. Configure
 
-### 5. Run the App
-
-**Backend:**
-```bash
-cd backend
-dotnet run --project Balenthiran.Apeify.WebApi
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-API docs available at: `http://localhost:5000/scalar/v1`
-
-## Running Locally
-
-> This section is worth keeping when you replace this README with your project spec.
-
-### Prerequisites
-
-`appsettings.Development.json` is gitignored (it contains secrets). You need it before the backend will start. Either run the onboarding script which generates it for you:
-
-```bash
-node scripts/init.mjs
-```
-
-Or create it manually at `backend/AroundTheWorld.WebApi/appsettings.Development.json`:
+Create `backend/AroundTheWorld.WebApi/appsettings.Development.json` (gitignored):
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=your_db;Username=your_user;Password=your_password"
+    "DefaultConnection": "Host=localhost;Database=around_the_world;Username=postgres;Password=postgres"
   },
-  "Jwt": {
-    "Secret": "your-secret-key-min-32-chars-long"
-  }
+  "Jwt": { "Secret": "<64 hex chars — openssl rand -hex 32>" },
+  "Admin": { "Key": "dev-admin-key" }
 }
 ```
 
-Similarly, `frontend/.env` is gitignored. Create it manually at `frontend/.env` if needed:
-
-```
-VITE_API_URL=http://localhost:5000
-```
-
-### Start the backend
+Then create the database and apply migrations:
 
 ```bash
+createdb around_the_world
+cd backend && dotnet ef database update \
+  --project AroundTheWorld.Database \
+  --startup-project AroundTheWorld.WebApi
+```
+
+The first run seeds the settings row and Round 1 automatically — party code
+`260802`, go-live 28 Aug 2026 17:00 BST, read-only 29 Aug 05:00 BST.
+
+### 2. Run
+
+```bash
+# Terminal 1 — API on http://localhost:5257, docs at /scalar/v1
 cd backend
-dotnet run --project AroundTheWorld.WebApi
+ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5257 \
+  dotnet run --project AroundTheWorld.WebApi --no-launch-profile
+
+# Terminal 2 — app on http://localhost:5173/birthday/
+cd frontend && npm install && npm run dev
 ```
 
-API runs at `http://localhost:5000` — interactive docs at `http://localhost:5000/scalar/v1`.
+> The app is served from the `/birthday` subpath both locally and in production,
+> so the API is called at `/birthday/api/...`. The Vite dev proxy strips the
+> prefix; in the cluster the backend adds it back via `PathBase`. Getting these
+> out of step is the classic "works on localhost, 404s in the cluster" failure.
 
-### Start the frontend
+### 3. Tests
 
 ```bash
-cd frontend
-npm run dev
+cd backend  && dotnet test        # 142 unit + in-process integration
+cd frontend && npm test           # 52 Vitest
+cd frontend && npx playwright test # 16 e2e on WebKit, phone viewport
 ```
 
-App runs at `http://localhost:5173`. The Vite dev server proxies `/api` and `/openapi` to the backend automatically.
+The e2e suite runs against mocked API responses, needs no backend, and writes
+screenshots to `frontend/e2e/screenshots/` for visual review.
 
-The UI is built on the **Iris** design system (tokens + primitives) — see [`docs/design-system.md`](docs/design-system.md) and the live showcase at `/design`.
-
-### Regenerate the API client
-
-After any backend endpoint change, refresh the committed OpenAPI schema with a Debug
-backend build (generated in-process — no running server needed), then run codegen:
+### Regenerating things
 
 ```bash
-cd backend && dotnet build AroundTheWorld.WebApi -c Debug   # refreshes openapi.json
-cd ../frontend && npm run codegen                          # reads it, works offline
+cd backend  && dotnet build AroundTheWorld.WebApi -c Debug  # refreshes openapi.json
+cd frontend && npm run codegen                              # OpenAPI → RTK Query hooks
+cd frontend && npm run generate:countries                   # rebuilds src/data/countries.json
 ```
-
-See `docs/specs/openapi-codegen.md` for the full workflow.
 
 ---
 
-## Initialise as a New Git Repo
+## Deployment
+
+Images are built by `.github/workflows/docker-build-push.yml`, which runs on
+every **push to `main`** as well as on `workflow_dispatch` — so promoting `dev`
+into `main` builds and pushes both images and pins their versions back into
+`helm/values.yaml`. The chart in `helm/` deploys both apps behind the shared
+`balenthiran.co.uk` ingress.
+
+> The comment block at the top of that workflow still claims it is "triggered
+> manually only". That is stale — read the `on:` block, not the prose above it.
+
+### 1. Create the secret
+
+Everything secret comes from one Kubernetes Secret in the target namespace:
 
 ```bash
-cd Balenthiran.Apeify
-git init
-git add .
-git commit -m "Initial commit from web-template"
-# Add your remote and push
+kubectl create secret generic around-the-world-secrets \
+  --from-literal=ConnectionStrings__DefaultConnection='Host=...;Database=...;Username=...;Password=...' \
+  --from-literal=Jwt__Secret="$(openssl rand -hex 32)" \
+  --from-literal=Admin__Key="$(openssl rand -hex 16)" \
+  --from-literal=PhotoStorage__AccessKeyId='...' \
+  --from-literal=PhotoStorage__SecretAccessKey='...'
 ```
 
-## Kubernetes Deployment
+| Key | What it is |
+|---|---|
+| `ConnectionStrings__DefaultConnection` | Postgres connection string |
+| `Jwt__Secret` | Session token signing key. **Must be stable** — regenerating it logs everyone out |
+| `Admin__Key` | The `X-Admin-Key` value for the hidden admin page |
+| `PhotoStorage__AccessKeyId` / `SecretAccessKey` | OCI S3 Compatibility API key pair |
 
-### 1. Create the K8s Namespace
+Non-secret storage settings (`Bucket`, `Region`, `ServiceUrl`, `PublicBaseUrl`)
+are plain values in `helm/values.yaml`.
+
+### 2. Set up the photo bucket
+
+1. Create a bucket in **OCI Object Storage**.
+2. Set visibility to **Object-Read-Only** if you want photos served straight
+   from the bucket. Leave it private and set `PhotoStorage__PublicBaseUrl` to
+   `""` to have the API proxy them instead — both work.
+3. In the OCI console, under your user's **Customer Secret Keys**, generate an
+   **S3 Compatibility API key**. That gives the access key / secret pair.
+4. `PhotoStorage__ServiceUrl` in `helm/values.yaml` is already set to
+   `https://lr7uc6l49odc.compat.objectstorage.uk-london-1.oraclecloud.com` —
+   the same tenancy namespace `registryPrefix` pushes images to. Change it only
+   if the bucket lives in a different tenancy.
+
+> `ForcePathStyle` is enabled in the S3 client because OCI's compatibility layer
+> does not support virtual-host style bucket addressing.
+
+### 3. Deploy
 
 ```bash
-kubectl create namespace your-app
+helm upgrade --install around-the-world ./helm --namespace <ns>
 ```
 
-> This must match `KUBERNETES_NAMESPACE` in `deploy.sh` and `-n` in the commands below.
-
-### 2. Provision a PostgreSQL Database
-
-Create a PostgreSQL database on your cloud provider (e.g. OCI, AWS RDS, Supabase). Note down the connection string in the format:
-
-```
-Host=your-host;Database=your_db;Username=your_user;Password=your_password
-```
-
-### 3. Create the K8s Secret
-
-```bash
-kubectl create secret generic your-app-secrets \
-  --from-literal=DATABASE_URL="Host=your-host;Database=your_db;Username=your_user;Password=your_password" \
-  -n your-app
-```
-
-> **Important**: The secret name (`your-app-secrets`) must match `secretKeyRef.name` in `helm/values.yaml`.
-
-### 4. Update Configuration
-
-Update these two files before deploying:
-
-**`helm/values.yaml`** — set `fullnameOverride`, domain, registry, and secret name.
-
-**`deploy.sh`** — set `APP_NAME` to match `fullnameOverride` in `values.yaml`, and update `REGISTRY_NAMESPACE` and `COMPARTMENT_ID`.
-
-### 5. Deploy
-
-```bash
-./deploy.sh
-```
-
-This will build and push Docker images, then trigger a rolling restart of both deployments.
-
-## New Project Checklist
-
-After scaffolding with `dotnet new web-template -n Company.ProjectName`, work through this list:
-
-### Local setup
-- [ ] Run `node scripts/init.mjs` — generates `appsettings.Development.json` and `frontend/.env`
-- [ ] Run the initial EF migration: `dotnet ef database update --project *.Database --startup-project *.WebApi`
-- [ ] Verify the app starts: backend on `http://localhost:5000`, frontend on `http://localhost:5173`
-
-### Branding / placeholders
-- [ ] `frontend/src/components/Hero.tsx` — replace "Your App Name" and the subtitle
-- [ ] `frontend/src/App.tsx` — replace "Your Name Here" in the footer
-- [ ] `frontend/src/components/Navbar.tsx` — replace "App Name" in the mobile logo
-- [ ] `frontend/src/data/config.json` — add any additional nav routes
-- [ ] `frontend/index.html` — update `<title>`
-
-### Helm + deploy script
-- [ ] `helm/values.yaml` — set `fullnameOverride`, `ingress.hosts[0].host`, and image repository paths
-- [ ] `deploy.sh` — set `APP_NAME`, `REGION`, `REGISTRY_NAMESPACE`, `COMPARTMENT_ID`, `KUBERNETES_NAMESPACE`
-
-### GitHub Actions
-- [ ] **Private repo?** Consider removing `ci.yml` — it runs on every PR and counts against the 2,000 free minutes/month. Delete the file or disable it in the repository settings (Settings → Actions → General). The deploy workflow (`docker-build-push.yml`) is manual-only so it only runs when you trigger it, making it less of a concern.
-- [ ] **Automated deploys on merge to main?** By default `docker-build-push.yml` is manual-only. To trigger it automatically on merge to main, add `push: branches: [main]` to the `on:` block:
-  ```yaml
-  on:
-    push:
-      branches:
-        - main
-    workflow_dispatch:
-  ```
-- [ ] `.github/workflows/docker-build-push.yml` — set `FRONTEND_IMAGE` and `BACKEND_IMAGE` env vars to match `helm/values.yaml`
-- [ ] Repository **Variables** (Settings → Secrets and variables → Variables):
-  - `OCIR_REGISTRY` — e.g. `lhr.ocir.io`
-  - `OCIR_NAMESPACE` — your OCI tenancy namespace
-- [ ] Repository **Secrets** (Settings → Secrets and variables → Secrets):
-  - `OCIR_USERNAME` — e.g. `your-tenancy/oracleidentitycloudservice/your@email.com`
-  - `OCIR_AUTH_TOKEN` — OCI auth token (OCI Console → User Settings → Auth Tokens)
-
-### Kubernetes
-- [ ] `kubectl create namespace your-app`
-- [ ] Provision a PostgreSQL database and note the connection string
-- [ ] `kubectl create secret generic your-app-secrets --from-literal=DATABASE_URL="..." -n your-app`
-
-### Git & GitHub repository settings
-- [ ] `git init && git add . && git commit -m "Initial commit from web-template"`
-- [ ] Create `main` and `dev` branches — all agent work branches off `dev`, PRs target `dev`, `main` is developer-only
-- [ ] Add remote and push
-- [ ] Enable **"Automatically delete head branches"** (Settings → General) — GitHub will delete feature branches after a PR merges, safely, without any agent involvement
-
-### SDD bootstrap — create initial issues
-- [ ] Run `node scripts/init-issues.mjs` — creates all Phase 1–7 orchestrator issues with the `MVP` milestone and ensures the three workflow labels exist. This is the first action the AI takes after the repo is pushed. See [`docs/ai-workflow.md`](docs/ai-workflow.md) for the full issue structure and label-driven workflow.
-
-### Documentation
-- [ ] Overwrite this `README.md` with your project's business spec — what the product is, who it's for, and what problem it solves. Keep the **Running Locally** section (or adapt it) so contributors know how to get started
-- [ ] Flesh out `docs/specs/` with feature specs before writing code — define the data model, API contracts, and UI behaviour up front
-- [ ] Update `CLAUDE.md` to reflect your project's specific conventions, data files, and any decisions made during setup
-- [ ] Delete any `docs/specs/` files from the template that don't apply to your project
+If OCI settings are left blank the backend falls back to on-disk photo storage
+and logs a warning. That is fine for a smoke test but **not** for real use: the
+directory is local to the pod, so it does not survive a restart and does not
+work across replicas.
 
 ---
 
-## GitHub Actions
+## Repository layout
 
-Two workflows are included in `.github/workflows/`:
+```
+backend/     .NET 10, 7-project Clean Architecture — see docs/specs/backend-architecture.md
+frontend/    React 19 + Vite, mobile-only, Iris design system
+helm/        Chart for both apps behind the shared ingress
+docs/spec.md          The design record
+docs/build-log.md     What worked, what didn't, what to fix upstream
+docs/screenshots/     Mobile screenshots of every screen
+```
 
-| Workflow | Trigger | Purpose |
-|---|---|---|
-| `ci.yml` | Pull requests only | Builds backend and frontend to catch compile errors — uses `ubuntu-latest` (unlimited on public repos, counts against the 2,000 min/month free allowance on private repos) |
-| `docker-build-push.yml` | Manual (`workflow_dispatch`) | Builds ARM64 Docker images and pushes to OCI Container Registry |
-
-### ARM64 Runner Note
-
-The deploy workflow uses `ubuntu-24.04-arm` (native ARM64, required for OKE free tier). This runner is **free for public repositories**. For private repositories it requires a paid GitHub plan — see the comment at the top of `docker-build-push.yml` for the `ubuntu-latest` + QEMU alternative.
-
-## Versioning & Releases
-
-Versions are computed automatically by [**GitVersion**](https://gitversion.net/) — you never hand-edit a version number.
-
-- **Configuration**: `GitVersion.yml` (Mainline mode — every merge to `main` bumps the patch by default; use Conventional-Commit prefixes / `+semver:` messages to bump minor or major).
-- **Where it runs**: the `docker-build-push.yml` workflow checks out the full history (`fetch-depth: 0`), runs `gitversion/execute`, and uses the resulting `semVer` to:
-  1. tag the backend and frontend Docker images (alongside `latest`), and
-  2. patch `helm/values.yaml` and commit it as a gitops release (`chore(gitops): release version X.Y.Z`).
-
-So the image tag, the deployed Helm version, and the Git history stay in lock-step with **zero manual versioning**.
-
-**Changelog.** Human-readable release notes live in [`CHANGELOG.md`](CHANGELOG.md) ([Keep a Changelog](https://keepachangelog.com/) format). Add your change to the `[Unreleased]` section in the same PR that makes it; it rolls into a dated/version heading when a release is cut.
-
-> **Note:** GitVersion is intentionally *not* wired into `dotnet build` (`GitVersion.MsBuild`), because `ci.yml` uses a shallow checkout and GitVersion needs full history — adding it would break the CI build gate. The app therefore does not self-report its GitVersion version; the `/status` endpoint returns a placeholder. If you want the running app to report its real version, add `fetch-depth: 0` to `ci.yml` and wire `GitVersion.MsBuild` into `backend/Directory.Build.props`.
-
-## Project Structure
-
-| Layer | Project | Responsibility |
-|---|---|---|
-| API | `*.WebApi` | Routes, DI, OpenAPI, Middleware |
-| Services | `*.Services` | Business logic, AutoMapper |
-| Abstractions | `*.Abstractions` | Interfaces, DTOs, Contracts |
-| Database | `*.Database` | EF Core DbContext, Migrations |
-| Entity Models | `*.EntityModels` | Database entities |
-| Domain Models | `*.DomainModels` | Business-layer objects |
-| Data Models | `*.DataModels` | Request/Response DTOs |
+Conventions for working in here: [`CLAUDE.md`](CLAUDE.md) and
+[`.agents/rules/project.md`](.agents/rules/project.md).

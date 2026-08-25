@@ -1,0 +1,115 @@
+.join {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+}
+
+.join__mark {
+  font-size: 4rem;
+  line-height: 1;
+  margin-bottom: var(--space-4);
+}
+
+.join__title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
+  margin: 0 0 var(--space-3);
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.join__blurb {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  max-width: 34ch;
+  margin: 0 0 var(--space-7);
+}
+
+.join__form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 22rem;
+  text-align: left;
+}
+
+.join__label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.join__input {
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  color: var(--text-primary);
+
+  /* 16px minimum: anything smaller and iOS Safari zooms the whole page on focus. */
+  font-size: 1rem;
+  margin-bottom: var(--space-5);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.join__input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.join__input--code {
+  font-size: var(--text-2xl);
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.join__error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-4);
+}
+
+.join__submit {
+  background: var(--gradient-accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+
+  /* Comfortable thumb target for someone three pints in. */
+  min-height: 3rem;
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.join__submit:hover:not(:disabled) {
+  box-shadow: var(--shadow-glow);
+}
+
+.join__submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.join__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

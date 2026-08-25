@@ -59,9 +59,11 @@ All discussion, questions, and remarks happen in the PR — not only in chat res
 ## Frontend
 
 - Never hand-edit `src/api/generatedApi.ts` — it is always overwritten by `npm run codegen`.
+- **Multipart endpoints must be hand-written** in `customApi.ts`. The codegen hands its `body` object to `fetchBaseQuery`, which JSON-serialises it — a file would arrive as `{}`.
 - Custom endpoints not covered by the OpenAPI schema go in a separate file (e.g. `src/api/customApi.ts`).
 - Components should be small and focused.
-- **Styling**: use SCSS. Each component gets a co-located `.scss` file (e.g. `Navbar.tsx` + `Navbar.scss`). Shared design tokens, resets, and utilities live in `src/styles/`. Do not write component-specific styles in global files, and do not use inline styles where a class exists.
+- **Styling**: plain CSS with custom properties. Each component gets a co-located `.css` file (e.g. `TabBar.tsx` + `TabBar.css`). Shared design tokens live in `src/styles/tokens.css`. Do not write component-specific styles in global files, and do not use inline styles where a class exists. (The template docs said SCSS; nothing in the codebase has ever used it.)
+- **Never use a bare element selector in a global stylesheet**, and never with `!important`. The template's `nav { width: 90% !important }` — written for its own marketing Navbar — silently shrank this app's bottom tab bar to 90% of the viewport on every phone, and no test caught it.
 
 ## Testing
 

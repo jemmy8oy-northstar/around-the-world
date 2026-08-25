@@ -31,3 +31,10 @@ Thumbs.db
 # Playwright screenshots — write-only artefacts of a test run, not fixtures.
 # They assert nothing (no toHaveScreenshot anywhere), and nothing reads them.
 frontend/e2e/screenshots/
+
+# dotnet ef on macOS emits a literal "bin\Debug" directory that the bin/ rule misses
+bin\\Debug/
+
+# Local photo storage — the FileSystemPhotoStorage fallback used when no OCI
+# credentials are configured. Uploaded photos, never source.
+photo-store/

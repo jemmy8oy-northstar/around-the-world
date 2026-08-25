@@ -195,8 +195,11 @@ test.describe("admin", () => {
     await expect(
       page.getByRole("button", { name: "🍺 Next pub" }),
     ).toBeVisible();
+    // The mocked game is Live, so the round reset sits behind the danger zone
+    // rather than next to the button used all night. This assertion used to
+    // name "Start a new round" directly.
     await expect(
-      page.getByRole("button", { name: "Start a new round" }),
+      page.getByRole("button", { name: "Danger zone" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Release name/ }),

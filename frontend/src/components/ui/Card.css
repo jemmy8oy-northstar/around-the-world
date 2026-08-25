@@ -1,9 +1,7 @@
-/* IRIS primitive: Card — a pane of glass */
+/* IRIS primitive: Card — a solid surface, elevated with shadow rather than blur */
 
 .ui-card {
   background: var(--bg-card);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   transition:

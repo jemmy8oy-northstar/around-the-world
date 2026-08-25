@@ -17,8 +17,6 @@
   font-size: var(--text-md);
   color: var(--text-primary);
   background: var(--bg-card);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);

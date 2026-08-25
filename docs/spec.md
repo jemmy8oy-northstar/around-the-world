@@ -244,9 +244,14 @@ Data refreshes **on page load only** — no polling, no websockets. Twenty peopl
 refreshing a feed by pulling down is entirely adequate for one evening and
 removes a whole category of failure.
 
-Styling uses the existing Iris design system (`docs/design-system.md`) —
-dark glass on near-black, one indigo→violet accent. It happens to suit a night
-out well, and reusing it means zero time spent on a visual language.
+Styling uses the **org design system** (`docs/design-system.md`) — the
+`casual` theme, light, coral on warm paper. Its token layer is vendored, so
+the app inherits a visual language rather than inventing one.
+
+> Written as *"the existing Iris design system — dark glass on near-black, one
+> indigo→violet accent"*. Iris and its successor were both rejected as
+> "vibe coded"; the app now wears the org system instead. Recorded rather than
+> quietly overwritten, because the rejected assumption is the useful part.
 
 ---
 
@@ -261,7 +266,7 @@ out well, and reusing it means zero time spent on a visual language.
 | 5 | Aggregated country badges, not per-post pins | Avoids marker overlap and tiny tap targets | Per-post pins remain possible later |
 | 6 | Client-side image resize | Upload speed on pub wifi is the real constraint | Server still enforces limits regardless |
 | 7 | `FileSystemPhotoStorage` fallback | Local dev and CI need no OCI credentials | Behind an interface; costs one class |
-| 8 | Keep Iris design system | Suits a night out; zero design time spent | Tokens are swappable |
+| 8 | Wear the org design system (`casual`) | Inherits a visual language instead of inventing one | Token layer is vendored, so upstream changes are a re-copy |
 | 9 | Refresh on page load only | Adequate for ~20 users for one evening | Polling is a small addition if it feels stale |
 | 10 | Username claim locked to first device | Keeps feed attribution honest | Admin can release a name |
 

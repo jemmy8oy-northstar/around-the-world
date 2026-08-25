@@ -51,20 +51,18 @@
 /* --- Variants -------------------------------------------------------- */
 
 .ui-button--primary {
-  background: var(--gradient-accent);
+  background: var(--accent-primary);
   color: var(--accent-contrast);
 }
 
 .ui-button--primary:hover:not(:disabled) {
   filter: brightness(1.12);
-  box-shadow: var(--shadow-glow);
+  box-shadow: var(--shadow-2);
   transform: translateY(-1px);
 }
 
 .ui-button--secondary {
   background: var(--bg-card);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
   border-color: var(--glass-border);
   color: var(--text-primary);
 }

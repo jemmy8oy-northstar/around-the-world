@@ -181,7 +181,7 @@ work across replicas.
 
 ```
 backend/     .NET 10, 7-project Clean Architecture — see docs/specs/backend-architecture.md
-frontend/    React 19 + Vite, mobile-only, Iris design system
+frontend/    React 19 + Vite, mobile-only, org design system (casual theme)
 helm/        Chart for both apps behind the shared ingress
 docs/spec.md          The design record
 docs/build-log.md     What worked, what didn't, what to fix upstream

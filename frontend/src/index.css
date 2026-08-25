@@ -1,10 +1,11 @@
 @import "./styles/tokens.css";
 
 /* ==========================================================================
-   NIGHT FLIGHT — base styles
+   Base styles
 
-   All values reference tokens from styles/tokens.css. If you find yourself
-   typing a hex colour or a px size here, it probably belongs in tokens.css.
+   All values reference tokens from styles/tokens.css, which maps the org
+   design system's roles onto this app's names. If you find yourself typing a
+   hex colour or a px size here, it probably belongs in tokens.css.
 
    The template's marketing-page rules were removed for this project. Worth
    knowing why: they included a blanket `nav { width: 90% !important }` inside
@@ -27,6 +28,19 @@ body {
   line-height: var(--leading-body);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+
+  /* ⚠️ MEASURED, not a taste adjustment — do not remove without re-measuring.
+     Plus Jakarta Sans (the design system's --font-text) has a word-space of
+     2px at 12px where Nunito, DM Sans, Manrope and Inter all have 3px. At the
+     app's real sizes that renders "Another Guinness. No notes." with the space
+     after the full stop effectively closed up, and "09:10 PM" as one token.
+     0.08em is the measured difference (0.25em − 0.167em), so it restores the
+     normal gap at every size rather than looking right at one of them.
+     Scoped to the body face only; headings reset it below, because Nunito's
+     space is already 3px and would come out too airy.
+     This is a defect in the shared font choice, not in this app — raised
+     upstream on the design system rather than only patched here. */
+  word-spacing: 0.08em;
 }
 
 h1,
@@ -36,13 +50,33 @@ h4 {
   font-family: var(--font-display);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-display);
+
+  /* Nunito needs no correction — see the note on body. */
+  word-spacing: normal;
 }
 
 button {
   cursor: pointer;
   border: none;
-  font-family: inherit;
   background: none;
+}
+
+/* Form controls do not inherit typography — the UA stylesheet gives every
+   input, textarea, select and button its own font-family, word-spacing and
+   letter-spacing. That is why the country search box rendered in **Arial**
+   while the rest of the app was in the brand face: a bug you can only see by
+   asking getComputedStyle, because at a glance one sans looks like another.
+   `word-spacing: inherit` is the same story and matters for the same reason
+   as the note on body — without it the correction stops at every control, so
+   "Åland Islands" and "American Samoa" in the country picker stayed jammed
+   while the text beside them was fixed. */
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  word-spacing: inherit;
+  letter-spacing: inherit;
 }
 
 a {
@@ -56,42 +90,14 @@ a {
   outline-offset: 2px;
 }
 
-/* The ambient wash the design system is built around: warm light low on the
-   page like a city passing underneath, cooling towards the top of the sky.
-
-   These two stops used to be the only literal colours outside tokens.css —
-   rgba(99,102,241) and rgba(168,85,247), the accent pair written out by hand.
-   They therefore did NOT move when the accent moved, which is the failure mode
-   a token layer exists to prevent. Mixed from the accent tokens now, so the
-   wash follows the brand instead of remembering an old one. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: -10%;
-  background:
-    radial-gradient(
-      circle at 15% 85%,
-      color-mix(
-          in srgb,
-          var(--accent-primary) calc(var(--gradient-opacity) * 100%),
-          transparent
-        )
-        0%,
-      transparent 45%
-    ),
-    radial-gradient(
-      circle at 85% 15%,
-      color-mix(
-          in srgb,
-          var(--accent-secondary) calc(var(--gradient-opacity) * 100%),
-          transparent
-        )
-        0%,
-      transparent 45%
-    );
-  z-index: -1;
-  pointer-events: none;
-}
+/* There is deliberately no `body::before` here any more.
+   Two rejected looks each had an ambient radial wash behind the page — two
+   accent-coloured gradients bled up from the corners. It is the single effect
+   that most reliably reads as "generated app", and on paper it is worse than
+   on ink, because a coloured haze over an off-white page just looks like the
+   screen is dirty. The page is one flat colour now, and depth comes from the
+   cards' shadows. If you are about to add a gradient back, that is the third
+   time; the palette was never the problem. */
 
 /* Respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {

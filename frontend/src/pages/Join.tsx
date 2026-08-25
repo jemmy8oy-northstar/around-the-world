@@ -82,7 +82,7 @@ export default function Join() {
           className="join__input"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="What should we call you?"
+          placeholder="This will appear above your posts"
           autoComplete="off"
           maxLength={32}
           required

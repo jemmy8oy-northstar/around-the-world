@@ -20,6 +20,13 @@ test.describe("joining", () => {
     await expect(page.getByLabel("Party code")).toBeVisible();
     await expect(page.getByLabel("Your name")).toBeVisible();
 
+    // The name field says what the name is FOR, not "what should we call you?" —
+    // people pick a better name when they know it goes above every post.
+    await expect(page.getByLabel("Your name")).toHaveAttribute(
+      "placeholder",
+      "This will appear above your posts",
+    );
+
     await page.screenshot({ path: "e2e/screenshots/join.png", fullPage: true });
   });
 

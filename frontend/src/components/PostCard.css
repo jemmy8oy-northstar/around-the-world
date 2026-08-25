@@ -1,5 +1,5 @@
 /* A post is a photograph someone took in a pub, so the card is built as a
-   print in a mount rather than as another glass panel: squarer corners, a warm
+   print in a mount rather than as another translucent panel: squarer corners, a warm
    paper-coloured surround, and a real drop shadow. The 24px pill radius the
    template shipped with is what made a photo of a pint read as a UI component. */
 .post {

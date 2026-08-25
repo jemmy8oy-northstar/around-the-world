@@ -15,7 +15,7 @@
   margin-bottom: var(--space-5);
 
   background: var(--bg-card);
-  /* Brass rather than grey: this is the primary action on the page, and a
+  /* Accent-coloured rather than grey: this is the primary action on the page, and a
      dashed neutral outline reads as "disabled" more than "tap here". */
   border: 2px dashed var(--accent-border);
   border-radius: var(--radius-md);

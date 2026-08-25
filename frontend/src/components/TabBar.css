@@ -10,7 +10,7 @@
 
   /* Solid, not translucent: without a blur behind it, a see-through bar would
      let the scrolling photo feed show through, and post captions were
-     legible straight through the old glass version of this bar. Page-toned
+     legible straight through the previous translucent version of this bar. Page-toned
      rather than --bg-card so the bar reads as part of the page chrome. */
   background: var(--bg-page);
   border-top: 1px solid var(--glass-border);
@@ -39,7 +39,7 @@
   color: var(--accent-fg);
 }
 
-/* A brass marker above the live tab. Colour alone was carrying "which tab am
+/* An accent marker above the live tab. Colour alone was carrying "which tab am
    I on", and a warm-on-warm palette gives colour less to work with than the
    old indigo-on-grey did — so the state gets a shape as well as a hue. */
 .tabbar__tab--active::before {

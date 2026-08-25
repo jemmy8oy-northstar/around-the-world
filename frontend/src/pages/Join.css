@@ -9,7 +9,7 @@
 }
 
 /* The mark is franked, like the stamp on the cover of a travel document: a
-   dashed brass ring with the globe punched into the middle of it. */
+   dashed accent-coloured ring with the globe punched into the middle of it. */
 .join__mark {
   display: flex;
   align-items: center;
@@ -40,7 +40,7 @@
   color: var(--text-primary);
 }
 
-/* The route line under the title — the same brass hairline that runs beneath
+/* The route line under the title — the same accent hairline that runs beneath
    the banner on every other screen, so the first screen belongs to the set. */
 .join__title::after {
   content: "";
@@ -96,7 +96,7 @@
   box-shadow: 0 0 0 var(--focus-ring-width) var(--accent-soft);
 }
 
-/* The party code is the ticket number: brass, tracked wide, tabular so the
+/* The party code is the ticket number: accent-coloured, tracked wide, tabular so the
    six digits do not shuffle sideways as they are typed. */
 .join__input--code {
   font-family: var(--font-display);

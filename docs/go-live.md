@@ -125,6 +125,28 @@ Then, from a phone on mobile data (not the office wifi):
    photo is still there, object storage is genuinely wired up. If it vanished,
    you were on the disk fallback — the one failure the app will not tell you about.
 
+## 6a. Claim your name first — before you tell anyone the URL
+
+**Do this the moment the app is up, ahead of step 6.4.** It takes ten seconds
+and it closes a real hole.
+
+Admin is granted by **username**, not by a key: `AdminIdentity.IsAdmin()` returns
+true for anyone joined as `james` and asks for no `X-Admin-Key`
+(`AdminIdentity.cs:20`). The only thing standing between a stranger and that name
+is the host code — **and the host code is `260802`, committed in this public
+repo** (`GameOptions.cs:14`, and in the README). So until you claim `james`,
+anyone who reads the repo can take it and get the admin panel.
+
+Once you have claimed it the hole is shut: a second attempt on the name gets a
+409 and no session (`Join_with_a_taken_name_conflicts`). Claiming it first is a
+complete fix, which is why nothing in the code was changed for this.
+
+> Changing the code later does **not** help: `GameBootstrapper` seeds
+> `GameSettings.PartyCode` from config only on first boot and returns early ever
+> after (`GameBootstrapper.cs:17`). If you want a code that isn't public, set
+> `Game__PartyCode` **before the first pod starts** — after that it lives in the
+> database, not in config.
+
 ## 7. What will not tell you it is broken
 
 Two config mistakes leave a **completely healthy-looking app**:

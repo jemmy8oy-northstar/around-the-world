@@ -34,6 +34,12 @@ export default defineConfig({
     // e2e/ is Playwright's; Vitest would try to run those specs and fail on
     // Playwright's test API.
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+    // Vitest pins import.meta.env.BASE_URL to '/' regardless of `base` above,
+    // which is the value that shipped the app broken — every API call went to
+    // the site root instead of /birthday/. Restoring the real base here is what
+    // lets src/api/__tests__/basePath.test.ts assert the URLs the production
+    // build actually requests. Keep it in step with `base`.
+    env: { BASE_URL: '/birthday/' },
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',

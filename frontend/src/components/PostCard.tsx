@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Post } from "../api/generatedApi";
 import { countryFlag, countryName } from "../countries/countries";
+import { resolveServerUrl } from "../api/basePath";
 import { PostActionsMenu, type PostAction } from "./PostActionsMenu";
 import "./PostCard.css";
 
@@ -63,7 +64,12 @@ export function PostCard({
         {post.photoUrl && !photoFailed ? (
           <img
             className="post__photo"
-            src={post.photoUrl}
+            // The API returns "/api/photos/{key}" when the bucket is private
+            // (PublicBaseUrl empty), which is the configured setup. That path
+            // is root-relative and this app is not at the root — without the
+            // prefix every photo in the feed 404s. resolveServerUrl passes a
+            // real bucket URL through untouched.
+            src={resolveServerUrl(post.photoUrl)}
             alt={
               post.caption || `A drink from ${countryName(post.countryCode)}`
             }

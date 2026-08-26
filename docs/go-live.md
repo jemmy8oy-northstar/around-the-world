@@ -76,8 +76,8 @@ All five keys are required. Each is read by exactly one thing:
 | Key | Read by | If blank |
 |---|---|---|
 | `ConnectionStrings__DefaultConnection` | `ServiceRegistration.cs:24` | DB features disabled — every request 500s |
-| `Jwt__Secret` | `JwtOptions.Secret` | tokens signed with an empty key |
-| `Admin__Key` | `AdminOptions.Key` | admin page unlocks with no key |
+| `Jwt__Secret` | `JwtRegistration.cs:15` | **silent until it isn't** — a random key is generated per process, so everyone is logged out the moment the pod restarts |
+| `Admin__Key` | `AdminAccessEndpointFilter.cs:36` | fails *closed*: the break-glass `X-Admin-Key` header stops working (403). Your own admin tab is unaffected — that runs off your token |
 | `PhotoStorage__AccessKeyId` | `PhotoStorageOptions.cs:14` | **silent** fallback to pod-local disk |
 | `PhotoStorage__SecretAccessKey` | `PhotoStorageOptions.cs:16` | **silent** fallback to pod-local disk |
 
@@ -108,11 +108,16 @@ kubectl -n balenthiran get pods -l app=around-the-world-backend
 kubectl -n balenthiran logs -l app=around-the-world-backend --tail=100 | grep WARNING
 ```
 
-**The grep is the important one, and it should print nothing.** Both silent
+**The grep is the important one, and it should print nothing.** All three silent
 failure modes announce themselves there and nowhere else:
 
 - `[WARNING] No database connection string configured` — `ServiceRegistration.cs:27`
 - `[WARNING] No OCI Object Storage credentials configured` — `PhotoStorageRegistration.cs:25`
+- `[WARNING] No Jwt:Secret configured` — `JwtRegistration.cs:23`. The nastiest of
+  the three, because the app looks perfect: guests join, post, everything works —
+  and then the pod restarts (a node event, an Argo self-heal, your own
+  `kubectl delete pod` in step 4 below) and **every guest at the party is logged
+  out at once**, mid-evening, with no way back but re-joining.
 
 Then, from a phone on mobile data (not the office wifi):
 
@@ -121,9 +126,13 @@ Then, from a phone on mobile data (not the office wifi):
 3. Join as **`james`** → asks for the code. Enter **`260802`** → you get the
    admin tab. (Admin is granted by *username*, so the code exists purely to stop
    a guest claiming your name.)
-4. **Post a photo, then `kubectl delete pod` the backend and reload.** If the
-   photo is still there, object storage is genuinely wired up. If it vanished,
-   you were on the disk fallback — the one failure the app will not tell you about.
+4. **Post a photo, then `kubectl delete pod` the backend and reload.** This one
+   step tests both silent failures at once:
+   - **The photo is still there** → object storage is genuinely wired up. If it
+     vanished, you were on the disk fallback.
+   - **You are still logged in** → `Jwt__Secret` is stable. If you land back on
+     the join screen, the secret is blank and every guest would be kicked the
+     same way on the next restart.
 
 ## 6a. Claim your name first — before you tell anyone the URL
 

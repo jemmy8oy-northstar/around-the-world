@@ -5,10 +5,14 @@
 }
 
 .worldmap__land path {
-  /* Land needs to read as land against a near-black page — the 8%-white glass
-     fill left continents almost indistinguishable from the sea. */
-  fill: color-mix(in srgb, var(--text-primary) 14%, transparent);
-  stroke: color-mix(in srgb, var(--text-primary) 26%, transparent);
+  /* Land and coastline are their own roles now. They used to be mixed from
+     --text-primary at 14% and 26% — two percentages tuned by eye against a
+     near-black page, so they carried an assumption about the background that
+     nothing recorded and no test could see. --map-land / --map-border are
+     defined in tokens.css against the theme's neutral roles instead, which
+     means the map follows a theme swap the way everything else does. */
+  fill: var(--map-land);
+  stroke: var(--map-border);
   stroke-width: 0.5;
 
   /* Avoids hairline seams between adjacent countries on high-DPI screens. */

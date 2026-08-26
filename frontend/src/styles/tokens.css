@@ -1,101 +1,131 @@
 /* ==========================================================================
-   NIGHT FLIGHT — design tokens
+   DESIGN-SYSTEM ADOPTION — the app's tokens, mapped onto the Northstar roles
    --------------------------------------------------------------------------
    The single source of truth for the visual language. Every colour, size,
    shadow and duration in the app should trace back to a variable here.
-   Semantics over raw values: components use --text-secondary, never #ab9f8c.
+   Semantics over raw values: components use --text-secondary, never a hex.
 
-   Dark is the default (defined on :root); [data-theme='light'] overrides.
-   Full reference: docs/design-system.md at the repo root.
+   HOW THIS FILE WORKS NOW, because it changed shape:
+
+   The colours are no longer invented here. `styles/design-system/` is a
+   verbatim copy of the org design-system's token layer (primitives, the
+   semantic role contract, and all three themes), and this file is the
+   *mapping* between that contract and the variable names ~700 lines of
+   component CSS already use. So a component still writes `var(--bg-card)` and
+   nothing in `components/` or `pages/` had to change for the palette to move.
+
+   `index.html` puts `data-theme="casual"` on <html>, which is what activates
+   the casual theme's `--color-*` roles. `data-mode="dark"` on the same element
+   flips the whole app to that theme's dark mode — the design system defines
+   it, so this app gets a working dark mode from one attribute rather than
+   from a second hand-maintained palette. Nothing sets it; light is default.
+
+   Reference: docs/design-system.md at the repo root, and the upstream role
+   contract documented at the bottom of styles/design-system/semantic.css.
 
    --------------------------------------------------------------------------
    Why it looks like this, so the next person does not undo it by accident:
 
-   The app is a night spent travelling the world one pub at a time, and the
-   things on screen are the things in a travel wallet — stamps, a route, a
-   ticket, photographs. So the palette is a departure board seen at night:
-   deep ink navy, warm brass, and the vermilion of an air-mail border.
+   Two previous looks were rejected for the same reason — "vibe coded". The
+   first ("Iris") was indigo→violet on near-black behind white glass, which is
+   the palette every generated app ships with. The second ("Night Flight") was
+   brass on ink navy: a different palette, but still a dark page, still a
+   gradient, still translucent cards. The common factor was never the hue.
 
-   Brass on ink is not decoration. It is the highest-legibility warm pairing
-   there is, which is why instrument panels and departure boards have used it
-   for a century, and this app is read on a phone in a dark pub by someone who
-   is several drinks in.
-
-   The predecessor ("Iris") was indigo→violet on near-black with white glass:
-   the default palette of every generated app, which is what made it read as
-   vibe-coded. Nothing was wrong with its structure — the token names, the
-   dark-default mechanism and the scales all survive unchanged, and that is
-   exactly why re-pointing the values rotated the whole app.
+   So this is not a third palette. It adopts the design system the org already
+   has: warm off-white paper, coral primary, teal for positive, sand-tinted
+   neutrals, and depth from soft shadows rather than from blur. Light by
+   default. **No gradients anywhere. No glass, no blur, no glow.** Those three
+   are what "vibe coded" actually names, and they are now absent rather than
+   restyled — `--gradient-accent`, `--gradient-opacity` and `--blur-glass`
+   are deleted, not re-pointed, so they cannot quietly come back.
    ========================================================================== */
 
+@import "./design-system/primitives.css";
+@import "./design-system/semantic.css";
+@import "./design-system/themes/casual.css";
+
 :root {
-  /* --- Brand accent (theme-invariant) --------------------------------- */
-  --accent-primary: #f0b429;
-  /* brass — the departure-board glow */
-  --accent-secondary: #e2542e;
-  /* vermilion — the air-mail border   */
-  --accent-contrast: #1a1207;
-  /* text placed on solid accent.
-     ⚠️ Ink, NOT white. The accent is a light warm gold, so white-on-accent
-     fails contrast badly — this token used to be #ffffff, which was correct
-     for indigo and would have been unreadable the moment the hue moved. */
-  --accent-border: rgba(240, 180, 41, 0.32);
-  /* accent-tinted hairlines          */
-  --danger-contrast: #fff6f5;
-  /* text placed on solid --danger-solid.
-     New, and it had to be: two destructive buttons (.admin__danger and
-     .ui-button--danger) were painting --accent-contrast onto a crimson
-     background. That happened to be white while the accent was indigo, so it
-     read correctly by coincidence — the moment the accent turned to brass and
-     its contrast token became ink, "Delete" would have gone near-black on
-     crimson. A token borrowed from another role is a bug waiting for the
-     palette to move. */
-  --gradient-accent: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+  /* --- Brand accent ---------------------------------------------------- */
+  /* Mapped onto the design system's primary/secondary roles rather than
+     declared, so a theme change upstream reaches this app. */
+  --accent-primary: var(--color-primary);
+  /* coral 500 */
+  --accent-secondary: var(--color-secondary);
+  /* teal 500  */
+  --accent-contrast: var(--color-on-primary);
+  /* Text placed on a solid accent fill.
+     ⚠️ This token has now been wrong in BOTH directions, which is the whole
+     argument for not hand-picking it. It was #ffffff for indigo (correct by
+     coincidence), had to become near-black ink for brass, and coral needs
+     white again. `--color-on-primary` is the theme's own answer to that
+     question, so it moves with the palette instead of being re-derived by
+     whoever happens to notice. */
+  --accent-border: color-mix(in srgb, var(--color-primary) 32%, transparent);
+  /* accent-tinted hairlines */
+  --danger-contrast: var(--color-on-danger);
+  /* Text placed on solid --danger-solid. Kept as its own role rather than
+     borrowed from --accent-contrast: they held the same value once, and the
+     day the accent moved, every destructive button would have gone
+     near-black on crimson. A token borrowed from another role is a bug
+     waiting for the palette to move. */
 
-  /* --- Typography ------------------------------------------------------ */
-  /* Bricolage Grotesque for display: wide, slightly irregular, characterful —
-     the opposite of the neutral geometric sans that makes an app look
-     machine-issued. DM Sans for reading: warm, open, and quiet enough to let
-     the display face and the photographs do the talking.
+  /* --- Map -------------------------------------------------------------- */
+  /* Land and coastline get their own named roles, because the design system's
+     contract has none and every ready-made alternative was a borrowed role:
+     the theme's neutral tint leaves the continents nearly invisible on paper,
+     and reaching for --color-border as a *fill* is the same class of mistake
+     as painting --accent-contrast onto a danger button.
+     They were previously mixed from --text-primary at 14% / 26% into
+     TRANSPARENT — two numbers tuned by eye against a near-black page, so they
+     silently carried an assumption about the background. Mixed into
+     --color-bg instead: the result is opaque, so it stays correct when the
+     page colour moves, and it is still derived from the theme, not picked. */
+  --map-land: color-mix(in srgb, var(--color-text) 7%, var(--color-bg));
+  --map-border: color-mix(in srgb, var(--color-text) 22%, var(--color-bg));
 
-     ⚠️ Manrope was the first choice here and it had to be measured out again.
-     Its word-space is 2px at 12px against DM Sans's and Inter's 3px, so at
-     --text-xs the space rounded away and "Photo unavailable" rendered as
-     "Photounavailable". Visible in a screenshot, invisible to every test in
-     the suite. If you swap this token, measure the space width at 12px —
-     e2e/tmp-space.spec.ts in the PR shows how. */
-  --font-main: "DM Sans", system-ui, -apple-system, sans-serif;
-  --font-display: "Bricolage Grotesque", var(--font-main);
+  /* --- Typography ------------------------------------------------------- */
+  /* The casual theme's voice: Nunito for display (rounded humanist — friendly
+     without being childish) and Plus Jakarta Sans for reading. Both come from
+     the design system; --font-display is ITS token, deliberately not
+     redeclared here (`--font-display: var(--font-heading)` would be a
+     reference cycle, since semantic.css already defines --font-heading in
+     terms of --font-display, and a cycle makes both resolve to nothing).
 
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
+     ⚠️ Measure the word-space before swapping either family. Manrope was
+     tried during the previous rotation and its space is 2px at 12px against
+     DM Sans's 3px, so at --text-xs "Photo unavailable" rendered as
+     "Photounavailable" — visible in a screenshot, invisible to every test in
+     the suite. Plus Jakarta Sans was measured at 3px before it was adopted. */
+  --font-main: var(--font-ui);
+
   --text-md: 1rem;
   --text-lg: 1.25rem;
   --text-xl: 1.5rem;
   --text-2xl: 2rem;
   --text-3xl: clamp(2.5rem, 5vw, 3rem);
   --text-display: clamp(3.5rem, 8vw, 6rem);
+  /* --text-xs / --text-sm come from primitives.css and match what was here. */
 
-  --weight-regular: 400;
-  --weight-medium: 500;
-  --weight-semibold: 600;
-  --weight-bold: 700;
   --weight-black: 800;
+  /* regular / medium / semibold / bold come from primitives.css. */
 
   --leading-tight: 1.1;
   --leading-snug: 1.3;
-  --leading-body: 1.6;
-  --tracking-display: -0.01em;
-  /* Bricolage is already wide; the -0.02em that suited Outfit closed it up. */
+  --leading-body: var(--leading-normal);
+  --tracking-display: 0;
+  /* Nunito is a rounded humanist with fairly tight sidebearings already; the
+     -0.01em that suited Bricolage Grotesque closed its counters up. */
   --tracking-label: 0.08em;
   /* Uppercase micro-labels — the stop counter, section headings, the mode
      pill. Was written out as a literal in four separate files. */
 
   /* --- Spacing (4px base grid) ----------------------------------------- */
+  /* Deliberately NOT re-pointed at the design system's --space-* scale. Both
+     are 4px-based but they index differently (ours 5 = 24px, theirs 20px), so
+     aliasing them would silently resize every gap in the app. Geometry is not
+     identity, and rewriting the layout three days before the party is how a
+     retheme becomes an outage. Re-pointing these is a separate change. */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -108,126 +138,92 @@
   --space-10: 128px;
 
   /* --- Radii ------------------------------------------------------------ */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-pill: 999px;
+  /* These DO come from the design system — corner radius is voice, not
+     layout. --radius-sm/md/lg/xl are primitives.css's; only the pill alias
+     needs stating, because the upstream name is --radius-full. */
+  --radius-pill: var(--radius-full);
 
-  /* --- Glass ------------------------------------------------------------ */
-  --blur-glass: 12px;
-  --blur-glass-heavy: 20px;
-
-  /* --- Focus ------------------------------------------------------------ */
-  --focus-ring-width: 3px;
-  /* The three `0 0 0 3px` focus shadows in the app were three magic numbers
-     that happened to agree. */
-
-  /* --- Motion ------------------------------------------------------------ */
-  --duration-fast: 150ms;
-  --duration-base: 300ms;
-  --duration-slow: 500ms;
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  /* --- Motion ----------------------------------------------------------- */
+  /* Durations and the standard easing are the design system's. --ease-spring
+     stays local: the contract has no overshoot curve, and the composer's
+     confirm animation is the only thing that uses one. */
+  --ease-standard: var(--ease-out);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --theme-transition:
-    background-color var(--duration-slow) ease, color var(--duration-slow) ease,
-    border-color var(--duration-slow) ease, background var(--duration-slow) ease;
+    background-color var(--duration-slow) var(--ease-out),
+    color var(--duration-slow) var(--ease-out),
+    border-color var(--duration-slow) var(--ease-out);
 }
 
 /* --------------------------------------------------------------------------
-   Dark theme (default — the night itself)
+   The colour mapping.
+
+   Declared on :root so it lands on the same element the theme does, and every
+   value is a var() — so switching `data-mode` on <html> re-resolves the whole
+   app with no second copy of this block. That is the point: the previous file
+   carried a hand-written dark palette AND a hand-written light palette, and
+   the light one was unreachable, because nothing in the app ever set
+   data-theme. Half this file had rotted where no screenshot could show it.
    -------------------------------------------------------------------------- */
-:root,
-[data-theme="dark"] {
-  /* Surfaces */
-  --bg-page: #0a0f1a;
-  /* ink navy, not neutral black: it gives the brass something to sit on */
-  --bg-card: rgba(255, 240, 219, 0.055);
-  /* the overlay is WARM. A white overlay over navy reads blue-grey and
-     clinical; a cream one reads like lamplight, and it is most of the
-     difference between this and the old look. */
-  --glass-hover-bg: rgba(255, 240, 219, 0.09);
-  --gradient-opacity: 0.14;
+:root {
+  /* Surfaces. --bg-card was a translucent overlay sitting behind a blur; it
+     is a solid surface now, which is most of what removing "glass" means. */
+  --bg-page: var(--color-bg);
+  --bg-card: var(--color-surface);
+  --glass-hover-bg: var(--color-surface-hover);
 
   /* Text */
-  --text-primary: #f7efe1;
-  --text-secondary: #ab9f8c;
-  --text-muted: #7b7263;
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --text-muted: var(--color-text-subtle);
 
-  /* Borders */
-  --glass-border: rgba(255, 238, 214, 0.12);
-  --border-strong: rgba(255, 238, 214, 0.24);
+  /* Borders. The `glass` in the name is a leftover from the old look — kept
+     because renaming it edits every component file for no visual change. */
+  --glass-border: var(--color-border);
+  --border-strong: var(--color-border-strong);
 
   /* Accent, themed */
-  --accent-hover: #ffc851;
-  --accent-fg: #f5c25a;
-  --accent-soft: rgba(240, 180, 41, 0.16);
+  --accent-hover: var(--color-primary-hover);
+  --accent-fg: var(--coral-700);
+  /* Accent-coloured TEXT, which is not the same thing as an accent fill:
+     --color-primary on paper measures **2.60:1** — fine behind a 48px button,
+     not fine at 13px. The role contract has no "primary text" role, which is
+     the first gap this adoption found in it; raised on the design system
+     rather than patched silently here. Until it exists this reaches one step
+     down the coral ramp — still the theme's own colour — and measures 4.56:1
+     on the page and 4.45:1 on --color-primary-subtle. */
+  --accent-soft: var(--color-primary-subtle);
 
-  /* Status. Warning is deliberately a full step oranger than the brass
-     accent — they sit next to each other on the mode pill and the
-     shadow-banned badge, and two golds would read as one. */
-  --success: #56c98b;
-  --success-soft: rgba(86, 201, 139, 0.14);
-  --warning: #e08a2e;
-  --warning-soft: rgba(224, 138, 46, 0.16);
-  --danger: #f4676f;
-  --danger-soft: rgba(244, 103, 111, 0.14);
-  --danger-solid: #d62839;
-  --danger-solid-hover: #e5424c;
+  /* Status.
+     ⚠️ MEASURED. Every use of these three in this app is `color:` or
+     `border-color:` — never a fill — and they are almost always set on their
+     own `-soft` tint. Straight from the contract that is unreadable:
+     --color-warning on --color-warning-subtle is **1.75:1**, which is roughly
+     invisible; success 3.50 and danger 3.07 also miss AA. The mode pill on the
+     admin screen is the visible case.
+     The contract is not wrong — it gives a FILL role and a TINT role, and has
+     no "status text on its own tint" role, the same gap --accent-fg hits
+     below. So the darkening happens here, derived from the theme's own colour
+     rather than picked, and the percentages come from the contrast numbers:
+     55% / 75% / 75% give 4.21, 5.06 and 4.47 against their tints. Raised on
+     the design system rather than only patched here. */
+  --success: color-mix(in srgb, var(--color-success) 75%, var(--color-text));
+  --success-soft: var(--color-success-subtle);
+  --warning: color-mix(in srgb, var(--color-warning) 55%, var(--color-text));
+  --warning-soft: var(--color-warning-subtle);
+  --danger: color-mix(in srgb, var(--color-danger) 75%, var(--color-text));
+  --danger-soft: var(--color-danger-subtle);
+  --danger-solid: var(--color-danger);
+  /* Stays the undarkened role: this one IS a fill, and --danger-contrast
+     (= --color-on-danger) is the theme's matching text colour for it. */
+  --danger-solid-hover: var(--red-600);
 
-  /* Elevation — warm-tinted rather than pure black, so cards lift off the
-     navy instead of punching a hole in it. */
-  --shadow-1: 0 2px 8px rgba(3, 6, 12, 0.4);
-  --shadow-2: 0 12px 28px rgba(3, 6, 12, 0.5);
-  --shadow-3: 0 20px 40px rgba(3, 6, 12, 0.6);
-  --shadow-glow: 0 0 28px rgba(240, 180, 41, 0.3);
-
-  /* Focus */
-  --focus-ring: #f5c25a;
-}
-
-/* --------------------------------------------------------------------------
-   Light theme — the same wallet in daylight: map paper and ink.
-   -------------------------------------------------------------------------- */
-[data-theme="light"] {
-  /* Surfaces */
-  --bg-page: #f8f1e4;
-  --bg-card: rgba(28, 20, 8, 0.04);
-  --glass-hover-bg: rgba(28, 20, 8, 0.07);
-  --gradient-opacity: 0.07;
-
-  /* Text */
-  --text-primary: #1d1912;
-  --text-secondary: #5c5347;
-  --text-muted: #8d8375;
-
-  /* Borders */
-  --glass-border: rgba(28, 20, 8, 0.1);
-  --border-strong: rgba(28, 20, 8, 0.2);
-
-  /* Accent, themed. Brass is a LIGHT colour, so accent-coloured *text* has to
-     darken on paper or it disappears — hence #96650a rather than the
-     --accent-primary used on the dark side. */
-  --accent-hover: #b57a00;
-  --accent-fg: #96650a;
-  --accent-soft: rgba(240, 180, 41, 0.18);
-
-  /* Status */
-  --success: #1f7a4d;
-  --success-soft: rgba(31, 122, 77, 0.12);
-  --warning: #a35a12;
-  --warning-soft: rgba(163, 90, 18, 0.12);
-  --danger: #c22a33;
-  --danger-soft: rgba(194, 42, 51, 0.1);
-  --danger-solid: #c22a33;
-  --danger-solid-hover: #a01f27;
-
-  /* Elevation */
-  --shadow-1: 0 2px 8px rgba(60, 42, 16, 0.08);
-  --shadow-2: 0 12px 28px rgba(60, 42, 16, 0.12);
-  --shadow-3: 0 20px 40px rgba(60, 42, 16, 0.16);
-  --shadow-glow: 0 0 28px rgba(240, 180, 41, 0.35);
+  /* Elevation. Real shadows rather than a glow: on a light page depth comes
+     from a soft warm-grey shadow, and a glow just reads as a rendering bug. */
+  --shadow-1: var(--shadow-sm);
+  --shadow-2: var(--shadow-md);
+  --shadow-3: var(--shadow-lg);
 
   /* Focus */
-  --focus-ring: #96650a;
+  --focus-ring: var(--color-focus-ring);
 }

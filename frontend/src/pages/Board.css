@@ -44,7 +44,7 @@
   min-height: 3rem;
 }
 
-/* The top three get the brass. A leaderboard where every row looks the same is
+/* The top three get the accent border. A leaderboard where every row looks the same is
    a list; the podium is the only reason to open this tab twice. */
 .board__row:nth-child(-n + 3) {
   border-color: var(--accent-border);

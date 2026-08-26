@@ -1,5 +1,13 @@
 <!doctype html>
-<html lang="en">
+<!--
+  data-theme names which of the design system's themes this app wears; the
+  vendored `styles/design-system/themes/casual.css` block only applies to an
+  element carrying it, so removing this attribute leaves every --color-* role
+  undefined and the app unstyled. Adding data-mode="dark" here flips the whole
+  app to the casual theme's dark mode — that is the only supported way to get
+  a dark app, and there is no second palette to maintain for it.
+-->
+<html lang="en" data-theme="casual">
   <head>
     <meta charset="UTF-8" />
     <!-- Must name a file that actually exists in frontend/public/. Vite rewrites this href
@@ -9,8 +17,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Colours the phone's own chrome (address bar, task switcher) to match
-         --bg-page, so the app does not sit in a white browser frame. -->
-    <meta name="theme-color" content="#0a0f1a" />
+         --bg-page, so the app does not sit in a mismatched browser frame.
+         ⚠️ A literal, and it cannot be a var(): this element is parsed before
+         any stylesheet exists. It must be kept in step by hand with the casual
+         theme's --color-bg (= --warm-50 in design-system/primitives.css). -->
+    <meta name="theme-color" content="#faf8f5" />
 
     <!-- Fonts are linked here rather than @import-ed from index.css. An
          @import inside a stylesheet cannot start downloading until that
@@ -22,7 +33,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     />
 
     <title>Around the World</title>

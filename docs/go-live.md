@@ -89,11 +89,16 @@ All five keys are required. Each is read by exactly one thing:
    plug, admin rename) — they were reunited onto this branch after #30/#32 were
    merged top-down.
 2. **`around-the-world#31`** → `main`. **This is the click that builds the
-   images.** A `dev` merge deploys nothing: `docker-build-push.yml` triggers on
-   push to `main` only, and it pins the new tags back into `helm/values.yaml`.
+   images.** A `dev` merge deploys nothing: the only push trigger on
+   `docker-build-push.yml` is `main`, and the build is what pins the new tags
+   back into `helm/values.yaml`.
 
 Wait for the `main` build to go green before step 5, or Argo syncs a chart
 pointing at an image tag that does not exist yet.
+
+> **If that build fails, you do not need another merge to retry it.** The
+> workflow also has `workflow_dispatch` — Actions → *Build and Push Docker
+> Images to OCIR* → **Run workflow** on `main`.
 
 ## 5. Approve `oke-fleet#6`
 
@@ -104,16 +109,30 @@ review, not just a merge** — and it is my PR, so I cannot approve it.
 ## 6. Verify — about two minutes
 
 ```bash
-kubectl -n balenthiran get pods -l app=around-the-world-backend
-kubectl -n balenthiran logs -l app=around-the-world-backend --tail=100 | grep WARNING
+kubectl -n balenthiran get pods -l app=backend,release=around-the-world
+kubectl -n balenthiran logs -l app=backend,release=around-the-world --tail=100 | grep WARNING
 ```
+
+**Check the first command actually lists a pod before you trust the second.** Both
+halves of that selector are load-bearing, and getting either wrong fails in the
+direction of good news:
+
+- The pod label is `app: backend`, not `app: around-the-world-backend`
+  (`helm/templates/deployment.yaml:17` takes it from `.name` in
+  `helm/values.yaml:19`; `around-the-world-backend` is only the Deployment and
+  Service *resource* name). A selector that matches nothing makes `grep` print
+  nothing — which is exactly what "everything is fine" looks like.
+- `release=around-the-world` is what stops it matching the *other* apps. Five
+  apps share the `balenthiran` namespace and **four of them also have a pod
+  labelled `app: backend`** — balenthiran.co.uk, holiday-planning, macro-metrics
+  and this one. Without the release, you would be reading their logs too.
 
 **The grep is the important one, and it should print nothing.** All three silent
 failure modes announce themselves there and nowhere else:
 
 - `[WARNING] No database connection string configured` — `ServiceRegistration.cs:27`
-- `[WARNING] No OCI Object Storage credentials configured` — `PhotoStorageRegistration.cs:25`
-- `[WARNING] No Jwt:Secret configured` — `JwtRegistration.cs:23`. The nastiest of
+- `[WARNING] No OCI Object Storage credentials configured` — `PhotoStorageRegistration.cs:27`
+- `[WARNING] No Jwt:Secret configured` — `JwtRegistration.cs:24`. The nastiest of
   the three, because the app looks perfect: guests join, post, everything works —
   and then the pod restarts (a node event, an Argo self-heal, your own
   `kubectl delete pod` in step 4 below) and **every guest at the party is logged

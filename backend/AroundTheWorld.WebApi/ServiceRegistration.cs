@@ -50,6 +50,7 @@ public static class ServiceRegistration
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IStatusService, StatusService>();
         services.AddScoped<IGameService, GameService>();
+        services.AddScoped<IChannelVisitService, ChannelVisitService>();
         services.AddScoped<IGameBootstrapper, GameBootstrapper>();
 
         // Auth

@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useDispatch } from "react-redux";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useJoinMutation } from "../api/atwApi";
+import {
+  useGetGameStateQuery,
+  useJoinMutation,
+  useRecordChannelVisitMutation,
+} from "../api/atwApi";
 import { sessionEstablished } from "../auth/sessionSlice";
 import { useSession } from "../auth/useSession";
 import { problemDetail } from "../api/problemDetail";
+import { SubscribePlug } from "../components/SubscribePlug";
+import { clearPending, isPending } from "../youtube/pendingChannelVisit";
 import "./Join.css";
 
 /**
@@ -27,6 +33,10 @@ export default function Join() {
   const navigate = useNavigate();
   const location = useLocation();
   const [join, { isLoading }] = useJoinMutation();
+  const [recordChannelVisit] = useRecordChannelVisitMutation();
+  // Anonymous, and already fetched here for the countdown — the channel URL
+  // rides along on it rather than needing an endpoint of its own.
+  const { data: game } = useGetGameStateQuery();
 
   const [username, setUsername] = useState("");
   const [hostCode, setHostCode] = useState("");
@@ -62,6 +72,17 @@ export default function Join() {
           isAdmin: result.isAdmin === true,
         }),
       );
+
+      // They tapped the plug before they had a name to attribute it to. Now
+      // they have one, so cash it in — and never let this fail the join.
+      if (isPending()) {
+        try {
+          await recordChannelVisit().unwrap();
+          clearPending();
+        } catch {
+          // Left pending: the next join from this device tries again.
+        }
+      }
 
       const from = (location.state as { from?: string } | null)?.from;
       navigate(from ?? "/", { replace: true });
@@ -132,6 +153,8 @@ export default function Join() {
           {isLoading ? "Joining…" : "Let's go"}
         </button>
       </form>
+
+      <SubscribePlug channelUrl={game?.youTubeUrl} />
     </div>
   );
 }

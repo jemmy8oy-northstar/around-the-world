@@ -56,6 +56,7 @@ public class PostFeedService(
             CountryCode = p.CountryCode,
             StopNumber = p.StopNumber,
             CreatedAt = p.CreatedAt,
+            AuthorVisitedChannel = p.User.ChannelVisitedAt != null,
             AuthorIsShadowBanned = p.User.IsShadowBanned,
         }).ToList();
     }

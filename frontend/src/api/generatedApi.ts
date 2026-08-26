@@ -48,6 +48,12 @@ const injectedRtkApi = api.injectEndpoints({
     >({
       query: () => ({ url: `/api/countries` }),
     }),
+    recordChannelVisit: build.mutation<
+      RecordChannelVisitApiResponse,
+      RecordChannelVisitApiArg
+    >({
+      query: () => ({ url: `/api/me/channel-visit`, method: "POST" }),
+    }),
     advancePubStop: build.mutation<
       AdvancePubStopApiResponse,
       AdvancePubStopApiArg
@@ -141,6 +147,8 @@ export type DeletePostApiArg = {
 };
 export type GetCountryTallyApiResponse = /** status 200 OK */ CountryTally[];
 export type GetCountryTallyApiArg = void;
+export type RecordChannelVisitApiResponse = unknown;
+export type RecordChannelVisitApiArg = void;
 export type AdvancePubStopApiResponse = /** status 200 OK */ number;
 export type AdvancePubStopApiArg = void;
 export type StartNewRoundApiResponse = /** status 200 OK */ number;
@@ -174,6 +182,7 @@ export type GameState = {
   currentStopNumber?: number;
   goLiveAt?: string;
   readOnlyAt?: string;
+  youTubeUrl?: string;
 };
 export type ProblemDetails = {
   type?: null | string;
@@ -205,6 +214,7 @@ export type Post = {
   caption: string;
   countryCode: string;
   stopNumber?: number;
+  authorVisitedChannel?: boolean;
   createdAt?: string;
 };
 export type IFormFile = Blob;
@@ -231,6 +241,7 @@ export const {
   useCreatePostMutation,
   useDeletePostMutation,
   useGetCountryTallyQuery,
+  useRecordChannelVisitMutation,
   useAdvancePubStopMutation,
   useStartNewRoundMutation,
   useUpdateCutoversMutation,

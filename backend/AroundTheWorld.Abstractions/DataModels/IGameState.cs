@@ -15,4 +15,6 @@ public interface IGameState
     DateTime GoLiveAt { get; set; }
 
     DateTime ReadOnlyAt { get; set; }
+
+    string YouTubeUrl { get; set; }
 }

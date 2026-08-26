@@ -333,6 +333,30 @@
         }
       }
     },
+    "/api/me/channel-visit": {
+      "post": {
+        "tags": [
+          "MeRoutes"
+        ],
+        "summary": "Records that you tapped through to the YouTube channel.",
+        "operationId": "RecordChannelVisit",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/stop/next": {
       "post": {
         "tags": [
@@ -594,6 +618,9 @@
           "readOnlyAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "youTubeUrl": {
+            "type": "string"
           }
         }
       },
@@ -650,6 +677,9 @@
           "stopNumber": {
             "type": "integer",
             "format": "int32"
+          },
+          "authorVisitedChannel": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -753,6 +783,9 @@
     },
     {
       "name": "CountryRoutes"
+    },
+    {
+      "name": "MeRoutes"
     },
     {
       "name": "Admin"

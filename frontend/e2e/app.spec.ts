@@ -77,6 +77,53 @@ test.describe("joining", () => {
     ).toBeVisible();
   });
 
+  test("the birthday plug links to the channel and records the tap on join", async ({
+    page,
+  }) => {
+    await page.goto("./join");
+
+    const plug = page.getByRole("link", { name: /subscribe/i });
+    await expect(plug).toBeVisible();
+    await expect(plug).toHaveAttribute(
+      "href",
+      "https://www.youtube.com/@jemmy8oy",
+    );
+
+    await page.screenshot({ path: "e2e/screenshots/join.png", fullPage: true });
+
+    // Tapped BEFORE joining, which is the whole difficulty: there is no token
+    // yet, so the visit has to survive until one exists. Stop the navigation —
+    // a real tap leaves for YouTube and the test cannot follow.
+    await plug.evaluate((a) => a.removeAttribute("target"));
+    await page.route("https://www.youtube.com/**", (route) =>
+      route.fulfill({ body: "not youtube" }),
+    );
+
+    const recorded = page.waitForRequest(
+      (request) =>
+        request.url().includes("/api/me/channel-visit") &&
+        request.method() === "POST",
+    );
+
+    await plug.click();
+    await page.goBack();
+
+    await page.getByLabel("Your name").fill("Dave");
+    await page.getByRole("button", { name: "Let's go" }).click();
+
+    await recorded;
+  });
+
+  test("the plug is not rendered at all when the channel url is switched off", async ({
+    page,
+  }) => {
+    await mockApi(page, { youTubeUrl: "" });
+    await page.goto("./join");
+
+    await expect(page.getByLabel("Your name")).toBeVisible();
+    await expect(page.getByRole("link", { name: /subscribe/i })).toHaveCount(0);
+  });
+
   test("the host's name with the wrong code stays out", async ({ page }) => {
     await page.goto("./join");
 
@@ -116,6 +163,18 @@ test.describe("the app", () => {
 
     // Two of the four fixture posts belong to the signed-in user.
     await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(2);
+  });
+
+  test("only the author who tapped the channel gets the crown", async ({
+    page,
+  }) => {
+    await page.goto("./");
+
+    // Exactly one of the four fixture authors has authorVisitedChannel — a
+    // count, not a "is visible", because rendering it on everyone would pass one.
+    await expect(
+      page.getByRole("img", { name: "Subscribed to the channel" }),
+    ).toHaveCount(1);
   });
 
   test("the map shows one badge per country", async ({ page }) => {

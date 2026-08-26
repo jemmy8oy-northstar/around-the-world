@@ -20,4 +20,6 @@ public sealed class GameStateResponse
     public DateTime GoLiveAt { get; set; }
 
     public DateTime ReadOnlyAt { get; set; }
+
+    public string YouTubeUrl { get; set; } = string.Empty;
 }

@@ -36,6 +36,8 @@ const POSTS = [
     caption: "Kingfisher, ice cold",
     countryCode: "IN",
     stopNumber: 2,
+    // The one fixture author who took the birthday hint.
+    authorVisitedChannel: true,
     createdAt: "2026-08-26T21:02:00Z",
   },
   {
@@ -73,6 +75,8 @@ export interface MockOptions {
   tally?: typeof TALLY;
   /** Admin-only: who the feed should mark as hidden from everyone else. */
   bannedUsernames?: string[];
+  /** Empty is the server's kill switch for the birthday plug. */
+  youTubeUrl?: string;
 }
 
 export async function mockApi(
@@ -84,6 +88,7 @@ export async function mockApi(
     posts = POSTS,
     tally = TALLY,
     bannedUsernames = [],
+    youTubeUrl = "https://www.youtube.com/@jemmy8oy",
   } = options;
 
   await page.route("**/api/game", (route) =>
@@ -95,8 +100,13 @@ export async function mockApi(
         currentStopNumber: 2,
         goLiveAt: "2026-08-28T16:00:00Z",
         readOnlyAt: "2026-08-29T04:00:00Z",
+        youTubeUrl,
       },
     }),
+  );
+
+  await page.route("**/api/me/channel-visit", (route) =>
+    route.fulfill({ status: 204, body: "" }),
   );
 
   // Mirrors the real endpoint rather than always saying yes: a guest joins on a

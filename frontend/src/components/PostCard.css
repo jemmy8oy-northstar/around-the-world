@@ -150,6 +150,15 @@
   letter-spacing: var(--tracking-display);
 }
 
+/* Sits tight against the name it belongs to rather than floating loose in the
+   meta row — the negative margin cancels the row's gap on the left only. */
+.post__crown {
+  flex: none;
+  margin-left: calc(var(--space-2) * -1);
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
 .post__time {
   color: var(--text-muted);
   font-size: var(--text-xs);

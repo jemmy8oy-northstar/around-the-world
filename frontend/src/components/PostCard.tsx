@@ -94,6 +94,20 @@ export function PostCard({
         <div className="post__meta">
           <span className="post__author">{post.username}</span>
 
+          {post.authorVisitedChannel && (
+            // A <span> with an accessible name rather than a bare emoji: a
+            // screen reader would otherwise announce "crown", which means
+            // nothing. title= gives the same explanation on a long press.
+            <span
+              className="post__crown"
+              role="img"
+              aria-label="Subscribed to the channel"
+              title="Subscribed to the channel"
+            >
+              👑
+            </span>
+          )}
+
           {authorIsShadowBanned && (
             <span className="post__hidden-badge">Hidden</span>
           )}

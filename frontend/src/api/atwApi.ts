@@ -28,6 +28,7 @@ export const atwApi = enhancedApi.enhanceEndpoints({
 export const {
   useGetGameStateQuery,
   useJoinMutation,
+  useRecordChannelVisitMutation,
   useGetPostsQuery,
   useDeletePostMutation,
   useGetCountryTallyQuery,

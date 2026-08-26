@@ -171,15 +171,32 @@ the 28th.
 
 ## 8. Timings and switches, if you need them on the night
 
-All are code defaults (`GameOptions.cs`) — none is set in `helm/values.yaml`, so
-each can be overridden with an env var and a restart:
+These are the code defaults (`GameOptions.cs`) and none is set in
+`helm/values.yaml` — but **only one of the four is still an env var once the app
+has booted once.** The first three are seeded into the database on first boot and
+read from there ever after (`GameBootstrapper.cs:17`, and the same early-return
+described in 6a), so setting the env var and restarting does **nothing at all**.
+Reach for the right lever:
 
-| Setting | Default | Notes |
+| Setting | Default | How you change it on the night |
 |---|---|---|
-| `Game__GoLiveAt` | `2026-08-28T16:00:00Z` | 17:00 BST |
-| `Game__ReadOnlyAt` | `2026-08-29T04:00:00Z` | 05:00 BST — feed freezes, stays readable |
-| `Game__PartyCode` | `260802` | only claims the host's name |
-| `Game__YouTubeUrl` | `https://www.youtube.com/@jemmy8oy` | **blank switches the plug off entirely** — read per request, so a restart is enough |
+| `Game__GoLiveAt` | `2026-08-28T16:00:00Z` — 17:00 BST | **Admin page → "Go live" box.** The env var is inert; the database owns it |
+| `Game__ReadOnlyAt` | `2026-08-29T04:00:00Z` — 05:00 BST, feed freezes but stays readable | **Admin page → "Read only" box.** The env var is inert |
+| `Game__PartyCode` | `260802` — only claims the host's name | **You can't.** No admin control, and the env var is inert (`PartyCodeValidator.cs:14` reads the database). Set it before the first pod starts or live with `260802` — see 6a |
+| `Game__YouTubeUrl` | `https://www.youtube.com/@jemmy8oy` | **Env var + restart.** This one genuinely is read per request (`GameService.cs:39`); blank switches the plug off entirely |
+
+## 8a. Clear your practice posts before 17:00
+
+Step 6.4 has you post a test photo and step 7 asks you to do it on the 27th —
+those posts are in the feed your guests will see. Clearing them is one button,
+**Admin → "New round"**, but it is rendered **only while the game is in
+Practice** (`Admin.tsx:119`) — deliberately, so it can't be fat-fingered in a
+dark pub. At 17:00 it disappears.
+
+So clear the round before go-live. If you find test photos in the live feed
+afterwards, the way back is on the same page: push **"Go live"** forward a few
+minutes, which returns the game to Practice and brings the button back. Deleting
+the posts one at a time from the feed also works.
 
 ---
 

@@ -102,6 +102,13 @@ const injectedRtkApi = api.injectEndpoints({
         method: "POST",
       }),
     }),
+    renameUser: build.mutation<RenameUserApiResponse, RenameUserApiArg>({
+      query: (queryArg) => ({
+        url: `/api/admin/users/${queryArg.username}/rename`,
+        method: "POST",
+        body: queryArg.renameUserRequest,
+      }),
+    }),
     adminDeletePost: build.mutation<
       AdminDeletePostApiResponse,
       AdminDeletePostApiArg
@@ -170,6 +177,11 @@ export type ReleaseUsernameApiResponse = unknown;
 export type ReleaseUsernameApiArg = {
   username: string;
 };
+export type RenameUserApiResponse = /** status 200 OK */ string;
+export type RenameUserApiArg = {
+  username: string;
+  renameUserRequest: RenameUserRequest;
+};
 export type AdminDeletePostApiResponse = unknown;
 export type AdminDeletePostApiArg = {
   postId: string;
@@ -232,6 +244,9 @@ export type UpdateCutoversRequest = {
 export type ShadowBanRequest = {
   isShadowBanned?: boolean;
 };
+export type RenameUserRequest = {
+  newUsername: string;
+};
 export const {
   useGetStatusQuery,
   useGetGameStateQuery,
@@ -248,5 +263,6 @@ export const {
   useGetShadowBannedUsersQuery,
   useSetShadowBanMutation,
   useReleaseUsernameMutation,
+  useRenameUserMutation,
   useAdminDeletePostMutation,
 } = injectedRtkApi;

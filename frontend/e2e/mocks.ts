@@ -162,6 +162,13 @@ export async function mockApi(
     route.fulfill({ status: 200, json: 3 }),
   );
 
+  // The rename route answers with the stored name, not the bare number the
+  // pub-stop catch-all above returns. Registered after it so this one wins.
+  await page.route("**/api/admin/users/*/rename", (route) => {
+    const body = route.request().postDataJSON() as { newUsername?: string };
+    return route.fulfill({ json: (body?.newUsername ?? "").trim() });
+  });
+
   // Registered after the catch-all, which returns the bare number the pub-stop
   // route answers with — Playwright uses the last matching route, and this one
   // has to win. Without it the banned-users query would hand the feed a `3`

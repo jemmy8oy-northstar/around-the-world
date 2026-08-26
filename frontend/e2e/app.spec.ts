@@ -317,6 +317,36 @@ test.describe("admin", () => {
     });
   });
 
+  test("renaming needs both boxes, and retargets onto the new name", async ({
+    page,
+  }) => {
+    await page.goto("./admin");
+    await page.getByLabel("Admin key").fill("dev-admin-key");
+    await page.getByRole("button", { name: "Unlock" }).click();
+
+    const rename = page.getByRole("button", { name: "Rename", exact: true });
+
+    // Disabled until BOTH names are present: with only one, the request either
+    // 404s on an empty user or renames someone to nothing.
+    await expect(rename).toBeDisabled();
+    await page.getByLabel("Username", { exact: true }).fill("Dave");
+    await expect(rename).toBeDisabled();
+    await page.getByLabel("New name").fill("  Steve  ");
+    await expect(rename).toBeEnabled();
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await rename.click();
+
+    await expect(page.getByText("Rename — done")).toBeVisible();
+
+    // The box now points at the name that exists, trimmed as the server stored
+    // it — otherwise the admin's next tap 404s against a name they just removed.
+    await expect(page.getByLabel("Username", { exact: true })).toHaveValue(
+      "Steve",
+    );
+    await expect(page.getByLabel("New name")).toHaveValue("");
+  });
+
   test("is not linked from the tab bar for an ordinary player", async ({
     page,
   }) => {

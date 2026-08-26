@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using AroundTheWorld.Abstractions.DomainModels;
 using AroundTheWorld.Abstractions.Exceptions;
 using AroundTheWorld.Abstractions.Services;
@@ -10,26 +9,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AroundTheWorld.Services.Auth;
 
-public partial class UsernameClaimService(AppDbContext dbContext, TimeProvider timeProvider) : IUsernameClaimService
+public class UsernameClaimService(AppDbContext dbContext, TimeProvider timeProvider) : IUsernameClaimService
 {
-    private const int MinimumLength = 2;
-    private const int MaximumLength = 32;
-
     public async Task<IDomainUser> ClaimAsync(string username, CancellationToken cancellationToken = default)
     {
-        var trimmed = (username ?? string.Empty).Trim();
-
-        if (trimmed.Length is < MinimumLength or > MaximumLength)
-        {
-            throw new ValidationException($"Pick a name between {MinimumLength} and {MaximumLength} characters.");
-        }
-
-        if (!AllowedUsername().IsMatch(trimmed))
-        {
-            throw new ValidationException("Names can use letters, numbers, spaces, hyphens and underscores.");
-        }
-
-        var normalised = trimmed.ToLowerInvariant();
+        // Length, characters and normalisation are shared with the admin's rename
+        // path — see UsernameRules. Two copies would drift.
+        var trimmed = UsernameRules.Clean(username);
+        var normalised = UsernameRules.Normalise(trimmed);
 
         var alreadyClaimed = await dbContext.Users.AnyAsync(
             u => u.UsernameNormalised == normalised && u.ReleasedAt == null, cancellationToken);
@@ -60,7 +47,4 @@ public partial class UsernameClaimService(AppDbContext dbContext, TimeProvider t
             IsShadowBanned = user.IsShadowBanned,
         };
     }
-
-    [GeneratedRegex(@"^[\p{L}\p{N} _-]+$")]
-    private static partial Regex AllowedUsername();
 }

@@ -25,6 +25,13 @@ public static class AdminRoutes
             .WithSummary("The usernames currently shadow-banned, so the admin can see and lift a ban.");
         group.MapPost("/users/{username}/ban", SetShadowBan).WithName("SetShadowBan");
         group.MapPost("/users/{username}/release", ReleaseUsername).WithName("ReleaseUsername");
+        group.MapPost("/users/{username}/rename", RenameUser)
+            .WithName("RenameUser")
+            .WithSummary("Renames a player in place, keeping their session and their posts.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
         group.MapDelete("/posts/{postId:guid}", DeleteAnyPost).WithName("AdminDeletePost");
 
         return parentGroup;
@@ -73,6 +80,16 @@ public static class AdminRoutes
         await userModerationService.ReleaseUsernameAsync(username, cancellationToken);
         return TypedResults.NoContent();
     }
+
+    private static async Task<Ok<string>> RenameUser(
+        string username,
+        RenameUserRequest request,
+        IUserModerationService userModerationService,
+        CancellationToken cancellationToken) =>
+        // Returns the stored name rather than 204: it is trimmed on the way in,
+        // so the admin page must render what was saved, not what was typed.
+        TypedResults.Ok(await userModerationService.RenameAsync(
+            username, request.NewUsername, cancellationToken));
 
     private static async Task<NoContent> DeleteAnyPost(
         Guid postId,

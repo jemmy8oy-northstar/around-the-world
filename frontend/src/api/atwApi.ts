@@ -22,6 +22,9 @@ export const atwApi = enhancedApi.enhanceEndpoints({
     // Also invalidates Moderation, or the "Hidden" badge would keep describing
     // the state before the tap that changed it.
     setShadowBan: { invalidatesTags: ["Posts", "Countries", "Moderation"] },
+    // The feed renders the author's name off the post, so without this a rename
+    // is invisible until something else happens to refetch.
+    renameUser: { invalidatesTags: ["Posts", "Moderation"] },
   },
 });
 
@@ -37,6 +40,7 @@ export const {
   useUpdateCutoversMutation,
   useSetShadowBanMutation,
   useReleaseUsernameMutation,
+  useRenameUserMutation,
   useAdminDeletePostMutation,
   useGetShadowBannedUsersQuery,
 } = atwApi;

@@ -317,6 +317,114 @@ test.describe("admin", () => {
     });
   });
 
+  /**
+   * The cooldown James asked for on #44. Driven end to end here rather than as a
+   * unit test on purpose: CI runs the e2e suite and does not yet run the vitest
+   * one (ATW#37), so this is the only place the behaviour is actually guarded.
+   */
+  test("a second Next pub inside the cooldown asks before it moves", async ({
+    page,
+  }) => {
+    const sent: unknown[] = [];
+
+    // The server refuses the second advance and says why. Fulfilled here so the
+    // spec drives the client's half of the contract; the refusal itself is
+    // pinned by AdminApiTests.
+    await page.route("**/birthday/api/admin/stop/next", (route) => {
+      const body = route.request().postDataJSON() as { force?: boolean };
+      sent.push(body);
+
+      // Mirrors PubStopService: the first advance of the round is never
+      // questioned, a later one inside the cooldown is refused, and `force` is
+      // the way through. Honouring force here is the point — a fixture that
+      // refused everything would pass while the override was broken.
+      if (sent.length === 1 || body?.force) return route.fulfill({ json: 3 });
+
+      return route.fulfill({
+        status: 409,
+        contentType: "application/problem+json",
+        json: {
+          detail: "You moved to stop 3 2 minutes ago. Move on to stop 4 anyway?",
+        },
+      });
+    });
+
+    await page.goto("./admin");
+    await page.getByLabel("Admin key").fill("dev-admin-key");
+    await page.getByRole("button", { name: "Unlock" }).click();
+
+    const nextPub = page.getByRole("button", { name: "🍺 Next pub" });
+
+    await nextPub.click();
+    await expect(page.getByRole("status")).toHaveText("Next pub — done");
+
+    // Decline the second one. The dialog has to carry the server's sentence:
+    // only the server knows when the last tap was.
+    let asked: string | null = null;
+    page.once("dialog", (dialog) => {
+      asked = dialog.message();
+      return dialog.dismiss();
+    });
+
+    await nextPub.click();
+    await expect(page.getByRole("status")).toHaveText(
+      "Next pub — left where it was",
+    );
+    expect(asked).toBe(
+      "You moved to stop 3 2 minutes ago. Move on to stop 4 anyway?",
+    );
+
+    // Declining sent no third request: the stop is where it was, not advanced
+    // and then apologised for.
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toEqual({});
+    expect(sent[1]).toEqual({});
+
+    // Accepting is the only thing that forces it. This is the half that stops
+    // the guard becoming a lock — there is no undo, so it must never be able to
+    // strand him at the wrong stop.
+    page.once("dialog", (dialog) => dialog.accept());
+    await nextPub.click();
+
+    await expect(page.getByRole("status")).toHaveText("Next pub — done");
+    expect(sent).toHaveLength(4);
+    expect(sent[3]).toEqual({ force: true });
+  });
+
+  test("a Next pub failure that is not the cooldown is never forced", async ({
+    page,
+  }) => {
+    const sent: unknown[] = [];
+
+    // A 404 — no round in progress. Retrying this with force would be the
+    // client deciding a real failure was a formality.
+    await page.route("**/birthday/api/admin/stop/next", (route) => {
+      sent.push(route.request().postDataJSON());
+      return route.fulfill({
+        status: 404,
+        contentType: "application/problem+json",
+        json: { detail: "There is no round in progress." },
+      });
+    });
+
+    let dialogs = 0;
+    page.on("dialog", (dialog) => {
+      dialogs += 1;
+      return dialog.accept();
+    });
+
+    await page.goto("./admin");
+    await page.getByLabel("Admin key").fill("dev-admin-key");
+    await page.getByRole("button", { name: "Unlock" }).click();
+    await page.getByRole("button", { name: "🍺 Next pub" }).click();
+
+    await expect(page.getByRole("status")).toHaveText(
+      "There is no round in progress.",
+    );
+    expect(dialogs).toBe(0);
+    expect(sent).toHaveLength(1);
+  });
+
   test("renaming needs both boxes, and retargets onto the new name", async ({
     page,
   }) => {

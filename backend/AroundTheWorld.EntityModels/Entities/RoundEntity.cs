@@ -14,6 +14,13 @@ public class RoundEntity
     /// <summary>The pub stop the group is currently on. Advanced by the admin.</summary>
     public int CurrentStopNumber { get; set; } = 1;
 
+    /// <summary>
+    /// When the stop was last advanced, so a mis-tap can be told from a real move
+    /// to the next pub. Null on a fresh round: the first advance of the night has
+    /// nothing to have double-tapped against, so it is never questioned.
+    /// </summary>
+    public DateTime? LastStopAdvancedAt { get; set; }
+
     public DateTime StartedAt { get; set; }
 
     /// <summary>Null while this round is the active one.</summary>

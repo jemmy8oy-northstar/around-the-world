@@ -56,26 +56,41 @@ export function PostCard({
     );
   }
 
+  // Rendered into whichever of the photo or the placeholder appears, because it
+  // is positioned against that box rather than against the frame around it.
+  const stamp = (
+    <span className="post__country">
+      {countryFlag(post.countryCode)} {countryName(post.countryCode)}
+    </span>
+  );
+
   return (
     <article
       className={`post${authorIsShadowBanned ? " post--shadow-banned" : ""}`}
     >
       <div className="post__photo-frame">
         {post.photoUrl && !photoFailed ? (
-          <img
-            className="post__photo"
-            // The API returns "/api/photos/{key}" when the bucket is private
-            // (PublicBaseUrl empty), which is the configured setup. That path
-            // is root-relative and this app is not at the root — without the
-            // prefix every photo in the feed 404s. resolveServerUrl passes a
-            // real bucket URL through untouched.
-            src={resolveServerUrl(post.photoUrl)}
-            alt={
-              post.caption || `A drink from ${countryName(post.countryCode)}`
-            }
-            loading="lazy"
-            onError={() => setPhotoFailed(true)}
-          />
+          // The stamp goes inside a box that shrink-wraps the photo, not on the
+          // frame: a photo taller than the height cap insets at the sides, and a
+          // stamp anchored to the frame would then sit on the card's background
+          // beside the photo instead of franked onto it.
+          <div className="post__shot">
+            <img
+              className="post__photo"
+              // The API returns "/api/photos/{key}" when the bucket is private
+              // (PublicBaseUrl empty), which is the configured setup. That path
+              // is root-relative and this app is not at the root — without the
+              // prefix every photo in the feed 404s. resolveServerUrl passes a
+              // real bucket URL through untouched.
+              src={resolveServerUrl(post.photoUrl)}
+              alt={
+                post.caption || `A drink from ${countryName(post.countryCode)}`
+              }
+              loading="lazy"
+              onError={() => setPhotoFailed(true)}
+            />
+            {stamp}
+          </div>
         ) : (
           // Storage may not be configured yet, and a photo can 404. A labelled
           // placeholder keeps the feed readable instead of showing a broken image.
@@ -88,12 +103,9 @@ export function PostCard({
               {countryFlag(post.countryCode)}
             </span>
             <span className="post__placeholder-text">Photo unavailable</span>
+            {stamp}
           </div>
         )}
-
-        <span className="post__country">
-          {countryFlag(post.countryCode)} {countryName(post.countryCode)}
-        </span>
       </div>
 
       <div className="post__body">

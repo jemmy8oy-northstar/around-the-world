@@ -1,6 +1,44 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import { mockApi, signIn, signInAsAdmin } from "./mocks";
 import { MAX_SCALE } from "../src/components/mapZoom";
+
+/**
+ * Spreads two fingers apart on `target` by `factor`, centred on a client point.
+ *
+ * Playwright has no multi-touch gesture API, and the CI project is mobile
+ * WebKit, where `mouse.wheel` throws outright — so the events are dispatched
+ * from inside the page. They are built as plain cancelable Events carrying a
+ * `touches` array rather than real TouchEvents, because the TouchEvent and
+ * Touch constructors are not portable across WebKit and Chromium and this has
+ * to run on both. The map's handler reads exactly `touches[i].clientX/Y` and
+ * calls preventDefault, so that is the whole surface it needs.
+ *
+ * This drives the real pinch path — the gesture James asked for — rather than
+ * the wheel shorthand it used to, which no phone ever sends.
+ */
+async function pinch(
+  target: Locator,
+  { x, y, factor }: { x: number; y: number; factor: number },
+): Promise<void> {
+  await target.evaluate((element, { x, y, factor }) => {
+    const fire = (type: string, touches: { clientX: number; clientY: number }[]) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "touches", { value: touches });
+      element.dispatchEvent(event);
+    };
+
+    // Both fingers move symmetrically, so the midpoint — the point the map is
+    // held still under — is the same before and after.
+    const spread = (radius: number) => [
+      { clientX: x - radius, clientY: y },
+      { clientX: x + radius, clientY: y },
+    ];
+
+    fire("touchstart", spread(60));
+    fire("touchmove", spread(60 * factor));
+    fire("touchend", []);
+  }, { x, y, factor });
+}
 
 /**
  * Smoke + screenshot coverage for the whole app, driven off mocked API
@@ -201,24 +239,23 @@ test.describe("the app", () => {
     const before = (await badge.boundingBox())!;
     const gapBefore = (await other.boundingBox())!.x - before.x;
 
-    // A wheel event is the desktop form of the same gesture and the only one a
-    // test can drive; the pinch path shares every line of it below toViewBox.
     // Modest, and about the centre, so both badges stay inside the viewBox —
     // a badge scrolled off the edge would make this assert nothing.
-    await map.hover();
-    await page.mouse.wheel(0, -450);
+    const frame = (await map.boundingBox())!;
+    await pinch(map, {
+      x: frame.x + frame.width / 2,
+      y: frame.y + frame.height / 2,
+      factor: 2,
+    });
 
     await expect(map).not.toHaveAttribute("data-scale", "1.000");
     const scale = Number(await map.getAttribute("data-scale"));
-    expect(scale).toBeGreaterThan(1.1);
+    expect(scale).toBeCloseTo(2, 2);
 
     const after = (await badge.boundingBox())!;
     const gapAfter = (await other.boundingBox())!.x - after.x;
 
-    // Countries move apart by exactly the zoom factor. Tied to the reported
-    // scale rather than a fixed number, because a browser divides the wheel
-    // delta it reports by the device pixel ratio — a hardcoded expectation here
-    // would quietly encode this one phone's DPR of 3.
+    // Countries move apart by exactly the zoom factor.
     expect(gapAfter / gapBefore).toBeCloseTo(scale, 1);
 
     // And a badge stays exactly the size it was, which is the actual
@@ -283,14 +320,15 @@ test.describe("the app", () => {
     // strongest statement of the problem: crowded pins are not merely hard to
     // read, they are untappable.
     const knot = (await nl.boundingBox())!;
-    await page.mouse.move(knot.x + knot.width / 2, knot.y + knot.height / 2);
 
-    // Deliberately far more delta than the ceiling needs, so this pins the
-    // ceiling rather than one browser's wheel arithmetic: the delta a browser
-    // reports is divided by the device pixel ratio, so a delta tuned to land
-    // just short of MAX_SCALE would encode this one phone's DPR of 3.
-    await page.mouse.wheel(0, -8000);
-    await expect(map).toHaveAttribute("data-scale", String(MAX_SCALE.toFixed(3)));
+    // Deliberately spread further than the ceiling allows, so this pins the
+    // ceiling itself rather than one gesture's arithmetic.
+    await pinch(map, {
+      x: knot.x + knot.width / 2,
+      y: knot.y + knot.height / 2,
+      factor: 20,
+    });
+    await expect(map).toHaveAttribute("data-scale", MAX_SCALE.toFixed(3));
 
     // Separated far enough to tap either one — and the badge itself has not
     // grown while that happened, or nothing would have been gained.

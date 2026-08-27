@@ -17,7 +17,11 @@ public static class AdminRoutes
             .AddEndpointFilter<AdminAccessEndpointFilter>()
             .WithTags("Admin");
 
-        group.MapPost("/stop/next", AdvanceStop).WithName("AdvancePubStop");
+        group.MapPost("/stop/next", AdvanceStop)
+            .WithName("AdvancePubStop")
+            .WithSummary("Moves the group to the next pub. Refuses with 409 if the last move was under five minutes ago, unless forced.")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
         group.MapPost("/round", StartRound).WithName("StartNewRound");
         group.MapPut("/settings", UpdateCutovers).WithName("UpdateCutovers");
         group.MapGet("/users/banned", GetShadowBanned)
@@ -38,9 +42,10 @@ public static class AdminRoutes
     }
 
     private static async Task<Ok<int>> AdvanceStop(
+        AdvanceStopRequest request,
         IPubStopService pubStopService,
         CancellationToken cancellationToken) =>
-        TypedResults.Ok(await pubStopService.AdvanceAsync(cancellationToken));
+        TypedResults.Ok(await pubStopService.AdvanceAsync(request.Force, cancellationToken));
 
     private static async Task<Ok<int>> StartRound(
         StartRoundRequest request,

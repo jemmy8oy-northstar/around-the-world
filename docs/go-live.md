@@ -45,8 +45,12 @@ Schema is created by EF migrations on startup — you do not need to run anythin
 
 ## 2. Bucket + S3 key
 
-- Bucket name **`around-the-world`** (`helm/values.yaml:47` — change the chart if
-  you name it something else).
+- Bucket name **`atw-bucket-20260826-2209`** — the bucket you actually created,
+  now in the chart (`helm/values.yaml`, `PhotoStorage__Bucket`). If you ever
+  rebuild the bucket under a different name, change the chart too: a wrong name
+  fails *every* upload forever while reading like bad luck ("Couldn't save that
+  photo — try again"), because a missing bucket and a forbidden one are the same
+  S3 error.
 - Region **`uk-london-1`**, service URL already set to
   `https://lr7uc6l49odc.compat.objectstorage.uk-london-1.oraclecloud.com`
   (`helm/values.yaml:56`) — the same tenancy the images push to.
@@ -85,13 +89,14 @@ All five keys are required. Each is read by exactly one thing:
 
 ## 4. Merge, in order
 
-1. **`around-the-world#29`** → `dev`. Carries #29 + #30 + #32 (entry code, YouTube
-   plug, admin rename) — they were reunited onto this branch after #30/#32 were
-   merged top-down.
-2. **`around-the-world#31`** → `main`. **This is the click that builds the
-   images.** A `dev` merge deploys nothing: the only push trigger on
-   `docker-build-push.yml` is `main`, and the build is what pins the new tags
-   back into `helm/values.yaml`.
+**As of 27 Aug this is done** — everything below is merged into `dev` (#28, #29,
+#33, #35, #38) and promoted to `main` up to #36. Kept because the rule outlives
+the list:
+
+**Only a merge into `main` deploys anything.** A `dev` merge ships nothing: the
+only push trigger on `docker-build-push.yml` is `main`, and that build is what
+pins the new image tags back into `helm/values.yaml`. So for any further change,
+the sequence is always: merge into `dev` → open a `dev`→`main` PR → merge that.
 
 Wait for the `main` build to go green before step 5, or Argo syncs a chart
 pointing at an image tag that does not exist yet.
@@ -187,6 +192,22 @@ Two config mistakes leave a **completely healthy-looking app**:
 
 Both are worth five minutes on the 27th rather than five minutes at 17:05 on
 the 28th.
+
+### If a guest says "it won't post", read the message they got
+
+The compose screen shows the API's own sentence when there is one, so the wording
+identifies the layer that failed. This mattered on 27 Aug: uploads were dying at
+the ingress, which caps the request body, and the screen could only say the
+generic line — so it looked like the bucket.
+
+| What they see | What is actually wrong |
+|---|---|
+| "Couldn't save that photo — try again." | **Object storage.** Wrong bucket name, or a bad S3 key pair. |
+| "That photo is too big — keep it under 8MB." | Genuinely a huge photo. The app said this, so everything upstream is fine. |
+| "That photo is too big to send — try a smaller one." | The **ingress** rejected it (413) before the app ran. `nginx.ingress.kubernetes.io/proxy-body-size` in `helm/values.yaml` is `10m` and must stay above the app's 8MB limit. |
+| "You've been signed out — join again." | Their token expired, or `Jwt__Secret` changed (a pod restart with no secret set regenerates it). |
+| "No connection — check your signal…" | Pub wifi. Not you. |
+| "That didn't send — try again. (error N)" | Nothing in the app produced this — the request never reached it. `N` is the status; anything 5xx here is the ingress or the pod being down. |
 
 ## 8. Timings and switches, if you need them on the night
 

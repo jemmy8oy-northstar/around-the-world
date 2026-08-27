@@ -406,12 +406,65 @@ test.describe("the app", () => {
     await expect(page.getByRole("option", { name: /Japan/ })).toHaveCount(0);
   });
 
+  test("picking a country fills the search box with it", async ({ page }) => {
+    await page.goto("./post");
+
+    const search = page.getByLabel("Search countries");
+    await search.fill("irel");
+    await page.getByRole("option", { name: /Ireland/ }).click();
+
+    // The box now reads as "what this post is tagged with" rather than as a
+    // search someone ran a minute ago and forgot about.
+    await expect(search).toHaveValue("Ireland");
+    await expect(page.getByRole("option", { name: /Ireland/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  test("searching again drops the country that was already picked", async ({
+    page,
+  }) => {
+    await page.goto("./post");
+
+    const search = page.getByLabel("Search countries");
+    await search.fill("fran");
+    await page.getByRole("option", { name: /France/ }).click();
+    await expect(search).toHaveValue("France");
+
+    // The trap James named on #46: search for somewhere else, don't tap a
+    // result, post anyway. Without this the post is still tagged France while
+    // the box says Germany, and nothing on screen admits it.
+    await search.fill("germ");
+    await expect(
+      page.getByRole("option", { name: /Germany/ }),
+    ).toHaveAttribute("aria-selected", "false");
+
+    // Attach a photo so the submit gets past the photo check and reaches the
+    // country one — otherwise this would assert on the photo error and pass
+    // whether or not the selection was ever cleared.
+    await page.locator("input[type=file]").setInputFiles({
+      name: "drink.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    });
+
+    await page.getByRole("button", { name: "Post it" }).click();
+    await expect(page.getByRole("alert")).toHaveText(/where the drink is from/i);
+  });
+
   test("posting without a photo explains what is missing", async ({ page }) => {
     await page.goto("./post");
 
     await page.getByRole("button", { name: "Post it" }).click();
 
-    await expect(page.getByRole("alert")).toHaveText(/photo/i);
+    // "with the drink", not "of the drink" — #46.
+    await expect(page.getByRole("alert")).toHaveText(
+      "Take a photo with the drink first.",
+    );
   });
 });
 

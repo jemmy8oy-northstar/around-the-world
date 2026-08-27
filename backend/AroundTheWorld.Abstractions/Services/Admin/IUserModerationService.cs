@@ -17,4 +17,13 @@ public interface IUserModerationService
     /// whose phone died and who can no longer prove they are themselves.
     /// </summary>
     Task ReleaseUsernameAsync(string username, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Renames a player in place, keeping their identity, their session and every
+    /// post they have already made. Unlike a release-and-reclaim, they never lose
+    /// their place in the game — which is the point, since the reason to rename
+    /// someone at 11pm is that the name is rude, not that they lost their phone.
+    /// </summary>
+    /// <returns>The new name as stored, with its chosen casing.</returns>
+    Task<string> RenameAsync(string username, string newUsername, CancellationToken cancellationToken = default);
 }

@@ -21,7 +21,7 @@ How the build went, and what to fix in `web-template`: [`docs/build-log.md`](doc
 
 | | |
 |---|---|
-| **Getting in** | One shared party code, then pick a username. No email, no password. |
+| **Getting in** | Pick a username. No code, no email, no password. (The host's name is the exception — it still needs the code, because admin is granted by username.) |
 | **Posting** | Camera → caption → country. Photos are resized in the browser before upload. |
 | **Feed** | Newest first, grouped under pub-stop dividers. |
 | **Map** | One numbered badge per country; tap it for that country's drinks. |
@@ -73,8 +73,9 @@ cd backend && dotnet ef database update \
   --startup-project AroundTheWorld.WebApi
 ```
 
-The first run seeds the settings row and Round 1 automatically — party code
-`260802`, go-live 28 Aug 2026 17:00 BST, read-only 29 Aug 05:00 BST.
+The first run seeds the settings row and Round 1 automatically — host code
+`260802` (needed only to claim the host's name), go-live 28 Aug 2026 17:00 BST,
+read-only 29 Aug 05:00 BST.
 
 ### 2. Run
 
@@ -166,14 +167,26 @@ are plain values in `helm/values.yaml`.
 
 ### 3. Deploy
 
+**ArgoCD deploys this app — do not run `helm upgrade` by hand.** `oke-fleet`'s
+`config/around-the-world.json` makes the fleet ApplicationSet generate an Argo
+`Application` pointing at `helm/` in this repo, into the `balenthiran`
+namespace. A manual `helm upgrade --install` creates a second, unmanaged
+release that Argo will then fight.
+
 ```bash
+# Only for a throwaway cluster with no ArgoCD in front of it:
 helm upgrade --install around-the-world ./helm --namespace <ns>
 ```
 
 If OCI settings are left blank the backend falls back to on-disk photo storage
 and logs a warning. That is fine for a smoke test but **not** for real use: the
 directory is local to the pod, so it does not survive a restart and does not
-work across replicas.
+work across replicas. Nothing else reports this — the app looks healthy.
+
+> **Going live for the party?** Follow **[docs/go-live.md](docs/go-live.md)**,
+> not this section. It has the cross-repo ordering (the secret must exist before
+> Argo first syncs), the measured namespace and key list, and the verification
+> that catches the silent failures.
 
 ---
 

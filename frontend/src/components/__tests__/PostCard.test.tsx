@@ -21,6 +21,26 @@ describe("PostCard", () => {
     expect(screen.getByText(/Ireland/)).toBeInTheDocument();
   });
 
+  it("crowns an author who tapped through to the channel", () => {
+    render(
+      <PostCard post={{ ...BASE, authorVisitedChannel: true }} canDelete={false} />,
+    );
+
+    // Found by its accessible name, not by the emoji — a bare 👑 tells a screen
+    // reader "crown", which explains nothing.
+    expect(
+      screen.getByRole("img", { name: "Subscribed to the channel" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not crown an author who did not", () => {
+    render(<PostCard post={BASE} canDelete={false} />);
+
+    expect(
+      screen.queryByRole("img", { name: "Subscribed to the channel" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("falls back to a labelled placeholder when the photo fails to load", () => {
     render(<PostCard post={BASE} canDelete={false} />);
 

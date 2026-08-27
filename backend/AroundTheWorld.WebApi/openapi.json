@@ -54,7 +54,7 @@
         "tags": [
           "AuthRoutes"
         ],
-        "summary": "Exchange the party code and a username for a token pair.",
+        "summary": "Exchange a username for a token pair. The host's name also needs the host code.",
         "operationId": "Join",
         "requestBody": {
           "content": {
@@ -87,8 +87,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -333,6 +333,30 @@
         }
       }
     },
+    "/api/me/channel-visit": {
+      "post": {
+        "tags": [
+          "MeRoutes"
+        ],
+        "summary": "Records that you tapped through to the YouTube channel.",
+        "operationId": "RecordChannelVisit",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/stop/next": {
       "post": {
         "tags": [
@@ -488,6 +512,87 @@
         }
       }
     },
+    "/api/admin/users/{username}/rename": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Renames a player in place, keeping their session and their posts.",
+        "operationId": "RenameUser",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/posts/{postId}": {
       "delete": {
         "tags": [
@@ -594,6 +699,9 @@
           "readOnlyAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "youTubeUrl": {
+            "type": "string"
           }
         }
       },
@@ -603,13 +711,15 @@
       },
       "JoinRequest": {
         "required": [
-          "partyCode",
           "username"
         ],
         "type": "object",
         "properties": {
           "partyCode": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "username": {
             "type": "string"
@@ -648,6 +758,9 @@
           "stopNumber": {
             "type": "integer",
             "format": "int32"
+          },
+          "authorVisitedChannel": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -702,6 +815,17 @@
           }
         }
       },
+      "RenameUserRequest": {
+        "required": [
+          "newUsername"
+        ],
+        "type": "object",
+        "properties": {
+          "newUsername": {
+            "type": "string"
+          }
+        }
+      },
       "ShadowBanRequest": {
         "type": "object",
         "properties": {
@@ -751,6 +875,9 @@
     },
     {
       "name": "CountryRoutes"
+    },
+    {
+      "name": "MeRoutes"
     },
     {
       "name": "Admin"

@@ -20,4 +20,16 @@ public class GameOptions
     public DateTime ReadOnlyAt { get; set; } = new(2026, 8, 29, 4, 0, 0, DateTimeKind.Utc);
 
     public string FirstRoundName { get; set; } = "Round 1";
+
+    /// <summary>
+    /// The channel the birthday plug links to. Unlike everything else on this
+    /// type this is NOT a seed value — it is read on every request, so it can be
+    /// changed with an env var and a restart rather than a database edit.
+    /// <para>
+    /// Blank switches the whole plug off: the API sends no URL and the app
+    /// renders nothing. That is the kill switch if the joke stops being funny
+    /// halfway through the night.
+    /// </para>
+    /// </summary>
+    public string YouTubeUrl { get; set; } = "https://www.youtube.com/@jemmy8oy";
 }

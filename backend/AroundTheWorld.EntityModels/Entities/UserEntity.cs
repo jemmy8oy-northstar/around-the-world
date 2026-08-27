@@ -30,6 +30,14 @@ public class UserEntity
     /// </summary>
     public DateTime? ReleasedAt { get; set; }
 
+    /// <summary>
+    /// When this user tapped through to the YouTube channel. It records the
+    /// *click*, which is all a website can observe — YouTube tells us nothing
+    /// about whether they then subscribed. The badge is therefore a thank-you
+    /// for looking, not a verified fact, and the column name says so.
+    /// </summary>
+    public DateTime? ChannelVisitedAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public ICollection<PostEntity> Posts { get; set; } = [];

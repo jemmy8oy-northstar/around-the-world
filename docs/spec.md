@@ -125,15 +125,29 @@ is fully usable but obviously not the real event.
 
 ---
 
-## 4. Auth — a party code and a name
+## 4. Auth — a name, and for one person a code
 
-No emails, no passwords, no OAuth. One shared code (`260802`) printed on the
-first round's table, plus a username you pick.
+No emails, no passwords, no OAuth, and since #29 **no party code either**: you
+type a name and you are in. The site is only writable for the twelve hours of
+the party and the link goes to people who were invited, so a code on the door
+bought nothing and cost every guest a step.
+
+The code (`260802`) survives guarding exactly one thing — **the host's name**.
+Admin is granted by *username* (§ Admin below), so an open join would hand the
+admin panel to whoever typed `james` first. The host's name therefore still
+needs the code; nobody else's does. The field is not on the join screen: it
+appears only after the API refuses a name as the host's.
 
 ```
-POST /api/auth/join     { partyCode, username } → { accessToken, refreshToken, user }
-POST /api/auth/refresh  { refreshToken }        → { accessToken, refreshToken }
+POST /api/auth/join     { username, partyCode? } → { accessToken, refreshToken, user }
+POST /api/auth/refresh  { refreshToken }         → { accessToken, refreshToken }
 ```
+
+`partyCode` is optional and is **read only when `username` is the host's**. A
+guest who sends one is not checked against it, so a stale value cannot lock
+anyone out. Claiming the host's name without the right code is a **403**, and it
+creates no user row — otherwise a failed attempt would squat the name and lock
+the host out of his own party for the night.
 
 - **Access token** — JWT, short-lived, sent as `Authorization: Bearer`.
 - **Refresh token** — opaque random string, stored **hashed** in `SESSION`,
@@ -144,8 +158,10 @@ POST /api/auth/refresh  { refreshToken }        → { accessToken, refreshToken 
 
 The threat model is "a friend messing about", not an attacker. What this design
 actually protects is the *feed's integrity* — that a post attributed to someone
-was made by the phone that claimed that name. It is not protection against
-someone who has the party code and wants in; that person is invited.
+was made by the phone that claimed that name. It was never protection against
+someone who wanted in; that person is invited. "A friend messing about" is
+exactly why the host's name keeps a lock: the friend who would type `james` for
+a laugh is the one person the threat model does predict.
 
 ### Shadow ban
 
@@ -161,7 +177,7 @@ All routes under `/api`. Authenticated unless noted.
 
 | Method | Route | Purpose |
 |---|---|---|
-| `POST` | `/auth/join` | Anonymous. Party code + username → tokens |
+| `POST` | `/auth/join` | Anonymous. Username → tokens. The host's name also needs the code |
 | `POST` | `/auth/refresh` | Anonymous. Rotate token pair |
 | `GET` | `/game` | Anonymous. Mode, active round, current stop, cutover timestamps |
 | `GET` | `/posts` | Active-round feed, newest first. `?country=XX` filters |

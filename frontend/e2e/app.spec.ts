@@ -11,13 +11,12 @@ import { mockApi, signIn, signInAsAdmin } from "./mocks";
 test.describe("joining", () => {
   test.beforeEach(async ({ page }) => mockApi(page));
 
-  test("the join screen asks for a code and a name", async ({ page }) => {
+  test("the join screen asks for a name and nothing else", async ({ page }) => {
     await page.goto("./join");
 
     await expect(
       page.getByRole("heading", { name: "Around the World" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Party code")).toBeVisible();
     await expect(page.getByLabel("Your name")).toBeVisible();
 
     // The name field says what the name is FOR, not "what should we call you?" —
@@ -26,6 +25,11 @@ test.describe("joining", () => {
       "placeholder",
       "This will appear above your posts",
     );
+
+    // No code, for anybody. Asserted by absence because that is the change:
+    // a field that is merely optional would still pass a "name is visible" test.
+    await expect(page.getByLabel("Party code")).toHaveCount(0);
+    await expect(page.getByLabel("Host code")).toHaveCount(0);
 
     await page.screenshot({ path: "e2e/screenshots/join.png", fullPage: true });
   });
@@ -39,13 +43,97 @@ test.describe("joining", () => {
   test("joining lands you on the feed", async ({ page }) => {
     await page.goto("./join");
 
-    await page.getByLabel("Party code").fill("260802");
     await page.getByLabel("Your name").fill("Dave");
     await page.getByRole("button", { name: "Let's go" }).click();
 
     await expect(
       page.getByText("Guinness, obviously. Setting the tone."),
     ).toBeVisible();
+  });
+
+  test("the host's name asks for the code, and the code lets him in", async ({
+    page,
+  }) => {
+    await page.goto("./join");
+
+    await page.getByLabel("Your name").fill("james");
+    await page.getByRole("button", { name: "Let's go" }).click();
+
+    // Refused, and the field it needs appears rather than being on the screen
+    // for every guest all night.
+    await expect(page.getByRole("alert")).toHaveText(/host code/i);
+    await expect(page.getByLabel("Host code")).toBeVisible();
+
+    await page.screenshot({
+      path: "e2e/screenshots/join-host-code.png",
+      fullPage: true,
+    });
+
+    await page.getByLabel("Host code").fill("260802");
+    await page.getByRole("button", { name: "Let's go" }).click();
+
+    await expect(
+      page.getByText("Guinness, obviously. Setting the tone."),
+    ).toBeVisible();
+  });
+
+  test("the birthday plug links to the channel and records the tap on join", async ({
+    page,
+  }) => {
+    await page.goto("./join");
+
+    const plug = page.getByRole("link", { name: /subscribe/i });
+    await expect(plug).toBeVisible();
+    await expect(plug).toHaveAttribute(
+      "href",
+      "https://www.youtube.com/@jemmy8oy",
+    );
+
+    await page.screenshot({ path: "e2e/screenshots/join.png", fullPage: true });
+
+    // Tapped BEFORE joining, which is the whole difficulty: there is no token
+    // yet, so the visit has to survive until one exists. Stop the navigation —
+    // a real tap leaves for YouTube and the test cannot follow.
+    await plug.evaluate((a) => a.removeAttribute("target"));
+    await page.route("https://www.youtube.com/**", (route) =>
+      route.fulfill({ body: "not youtube" }),
+    );
+
+    const recorded = page.waitForRequest(
+      (request) =>
+        request.url().includes("/api/me/channel-visit") &&
+        request.method() === "POST",
+    );
+
+    await plug.click();
+    await page.goBack();
+
+    await page.getByLabel("Your name").fill("Dave");
+    await page.getByRole("button", { name: "Let's go" }).click();
+
+    await recorded;
+  });
+
+  test("the plug is not rendered at all when the channel url is switched off", async ({
+    page,
+  }) => {
+    await mockApi(page, { youTubeUrl: "" });
+    await page.goto("./join");
+
+    await expect(page.getByLabel("Your name")).toBeVisible();
+    await expect(page.getByRole("link", { name: /subscribe/i })).toHaveCount(0);
+  });
+
+  test("the host's name with the wrong code stays out", async ({ page }) => {
+    await page.goto("./join");
+
+    await page.getByLabel("Your name").fill("james");
+    await page.getByRole("button", { name: "Let's go" }).click();
+    await page.getByLabel("Host code").fill("000000");
+    await page.getByRole("button", { name: "Let's go" }).click();
+
+    await expect(page).toHaveURL(/\/join$/);
+    await expect(page.getByRole("alert")).toBeVisible();
   });
 });
 
@@ -75,6 +163,18 @@ test.describe("the app", () => {
 
     // Two of the four fixture posts belong to the signed-in user.
     await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(2);
+  });
+
+  test("only the author who tapped the channel gets the crown", async ({
+    page,
+  }) => {
+    await page.goto("./");
+
+    // Exactly one of the four fixture authors has authorVisitedChannel — a
+    // count, not a "is visible", because rendering it on everyone would pass one.
+    await expect(
+      page.getByRole("img", { name: "Subscribed to the channel" }),
+    ).toHaveCount(1);
   });
 
   test("the map shows one badge per country", async ({ page }) => {
@@ -215,6 +315,36 @@ test.describe("admin", () => {
       path: "e2e/screenshots/admin.png",
       fullPage: true,
     });
+  });
+
+  test("renaming needs both boxes, and retargets onto the new name", async ({
+    page,
+  }) => {
+    await page.goto("./admin");
+    await page.getByLabel("Admin key").fill("dev-admin-key");
+    await page.getByRole("button", { name: "Unlock" }).click();
+
+    const rename = page.getByRole("button", { name: "Rename", exact: true });
+
+    // Disabled until BOTH names are present: with only one, the request either
+    // 404s on an empty user or renames someone to nothing.
+    await expect(rename).toBeDisabled();
+    await page.getByLabel("Username", { exact: true }).fill("Dave");
+    await expect(rename).toBeDisabled();
+    await page.getByLabel("New name").fill("  Steve  ");
+    await expect(rename).toBeEnabled();
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await rename.click();
+
+    await expect(page.getByText("Rename — done")).toBeVisible();
+
+    // The box now points at the name that exists, trimmed as the server stored
+    // it — otherwise the admin's next tap 404s against a name they just removed.
+    await expect(page.getByLabel("Username", { exact: true })).toHaveValue(
+      "Steve",
+    );
+    await expect(page.getByLabel("New name")).toHaveValue("");
   });
 
   test("is not linked from the tab bar for an ordinary player", async ({

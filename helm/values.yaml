@@ -40,7 +40,7 @@ apps:
       # Non-secret object-storage settings. The bucket name and endpoint are not
       # credentials; only the key pair below is.
       - name: PhotoStorage__Bucket
-        value: "around-the-world"
+        value: "atw-bucket-20260826-2209"
       - name: PhotoStorage__Region
         value: "uk-london-1"
       # The OCI tenancy namespace here is the same one `registryPrefix` above

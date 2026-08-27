@@ -133,6 +133,50 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
     }
   }
 
+  /**
+   * The stop cannot be moved back — undoing one means restarting the whole
+   * round, which archives everybody's photos. So the server refuses a second
+   * advance inside five minutes, and that refusal is turned into the question it
+   * actually is rather than an error.
+   *
+   * The confirmation is asked with the SERVER's sentence, which names the stop
+   * and how long ago: only the server knows when the last tap was, and a second
+   * phone on the same admin key would otherwise be guessed about locally.
+   *
+   * A double-tap cannot get through this. The first tap advances, the second is
+   * refused and opens a modal dialog — which swallows the taps that follow it
+   * rather than answering itself.
+   */
+  async function advanceToNextPub() {
+    try {
+      await advanceStop({ advanceStopRequest: {} }).unwrap();
+      setMessage("Next pub — done");
+      return;
+    } catch (caught) {
+      const question = problemDetail(caught);
+
+      // 409 is the cooldown and nothing else on this route. Anything else is a
+      // real failure and must not be re-sent with force — that would turn "the
+      // round has ended" into a second attempt at the same broken thing.
+      if ((caught as { status?: unknown })?.status !== 409 || !question) {
+        setMessage(question ?? "Next pub — failed");
+        return;
+      }
+
+      if (!window.confirm(question)) {
+        setMessage("Next pub — left where it was");
+        return;
+      }
+    }
+
+    try {
+      await advanceStop({ advanceStopRequest: { force: true } }).unwrap();
+      setMessage("Next pub — done");
+    } catch (caught) {
+      setMessage(problemDetail(caught) ?? "Next pub — failed");
+    }
+  }
+
   return (
     <div className="admin">
       <div className="admin__header">
@@ -162,7 +206,7 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
         <button
           className="admin__primary"
           type="button"
-          onClick={() => run("Next pub", () => advanceStop().unwrap())}
+          onClick={advanceToNextPub}
         >
           🍺 Next pub
         </button>

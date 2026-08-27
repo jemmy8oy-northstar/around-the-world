@@ -42,7 +42,9 @@ export default function Compose() {
     event.preventDefault();
     setError(null);
 
-    if (!file) return setError("Take a photo of the drink first.");
+    // "with the drink", not "of the drink" — James's wording on #46. A photo OF
+    // a pint is a photo of a pint; the night is worth more if people are in them.
+    if (!file) return setError("Take a photo with the drink first.");
     if (!countryCode) return setError("Pick where the drink is from.");
 
     try {
@@ -78,7 +80,7 @@ export default function Compose() {
             <span className="compose__photo-icon" aria-hidden="true">
               📸
             </span>
-            Take a photo
+            Take a photo with the drink
           </span>
         )}
       </button>

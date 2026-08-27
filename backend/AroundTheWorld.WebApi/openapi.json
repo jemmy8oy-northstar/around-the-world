@@ -362,7 +362,18 @@
         "tags": [
           "Admin"
         ],
+        "summary": "Moves the group to the next pub. Refuses with 409 if the last move was under five minutes ago, unless forced.",
         "operationId": "AdvancePubStop",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceStopRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -371,6 +382,26 @@
                 "schema": {
                   "type": "integer",
                   "format": "int32"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -620,6 +651,14 @@
   },
   "components": {
     "schemas": {
+      "AdvanceStopRequest": {
+        "type": "object",
+        "properties": {
+          "force": {
+            "type": "boolean"
+          }
+        }
+      },
       "AuthSession": {
         "required": [
           "accessToken",

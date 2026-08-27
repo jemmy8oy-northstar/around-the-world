@@ -1,5 +1,44 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import { mockApi, signIn, signInAsAdmin } from "./mocks";
+import { MAX_SCALE } from "../src/components/mapZoom";
+
+/**
+ * Spreads two fingers apart on `target` by `factor`, centred on a client point.
+ *
+ * Playwright has no multi-touch gesture API, and the CI project is mobile
+ * WebKit, where `mouse.wheel` throws outright — so the events are dispatched
+ * from inside the page. They are built as plain cancelable Events carrying a
+ * `touches` array rather than real TouchEvents, because the TouchEvent and
+ * Touch constructors are not portable across WebKit and Chromium and this has
+ * to run on both. The map's handler reads exactly `touches[i].clientX/Y` and
+ * calls preventDefault, so that is the whole surface it needs.
+ *
+ * This drives the real pinch path — the gesture James asked for — rather than
+ * the wheel shorthand it used to, which no phone ever sends.
+ */
+async function pinch(
+  target: Locator,
+  { x, y, factor }: { x: number; y: number; factor: number },
+): Promise<void> {
+  await target.evaluate((element, { x, y, factor }) => {
+    const fire = (type: string, touches: { clientX: number; clientY: number }[]) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "touches", { value: touches });
+      element.dispatchEvent(event);
+    };
+
+    // Both fingers move symmetrically, so the midpoint — the point the map is
+    // held still under — is the same before and after.
+    const spread = (radius: number) => [
+      { clientX: x - radius, clientY: y },
+      { clientX: x + radius, clientY: y },
+    ];
+
+    fire("touchstart", spread(60));
+    fire("touchmove", spread(60 * factor));
+    fire("touchend", []);
+  }, { x, y, factor });
+}
 
 /**
  * Smoke + screenshot coverage for the whole app, driven off mocked API
@@ -188,6 +227,129 @@ test.describe("the app", () => {
     await page.screenshot({ path: "e2e/screenshots/map.png", fullPage: true });
   });
 
+  test("zooming the map spreads the badges without inflating them", async ({
+    page,
+  }) => {
+    await page.goto("./map");
+
+    const badge = page.getByRole("button", { name: "2 from IE" });
+    const other = page.getByRole("button", { name: /from IN$/ });
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+
+    const before = (await badge.boundingBox())!;
+    const gapBefore = (await other.boundingBox())!.x - before.x;
+
+    // Modest, and about the centre, so both badges stay inside the viewBox —
+    // a badge scrolled off the edge would make this assert nothing.
+    const frame = (await map.boundingBox())!;
+    await pinch(map, {
+      x: frame.x + frame.width / 2,
+      y: frame.y + frame.height / 2,
+      factor: 2,
+    });
+
+    await expect(map).not.toHaveAttribute("data-scale", "1.000");
+    const scale = Number(await map.getAttribute("data-scale"));
+    expect(scale).toBeCloseTo(2, 2);
+
+    const after = (await badge.boundingBox())!;
+    const gapAfter = (await other.boundingBox())!.x - after.x;
+
+    // Countries move apart by exactly the zoom factor.
+    expect(gapAfter / gapBefore).toBeCloseTo(scale, 1);
+
+    // And a badge stays exactly the size it was, which is the actual
+    // requirement: magnifying the cluster along with the map separates nothing.
+    expect(after.width).toBeCloseTo(before.width, 1);
+    expect(after.height).toBeCloseTo(before.height, 1);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-zoomed.png",
+      fullPage: true,
+    });
+
+    await page.getByRole("button", { name: "Reset map" }).click();
+    await expect(map).toHaveAttribute("data-scale", "1.000");
+  });
+
+  test("a crowded map can be pinched apart", async ({ page }) => {
+    // The case worth designing for: a party that really does drink its way
+    // around the world ends up with a knot of badges over Europe, where the
+    // countries are small and close. Three fixture pins never show this.
+    await mockApi(page, {
+      tally: [
+        "GB", "IE", "FR", "DE", "NL", "BE", "LU", "CH", "AT", "IT",
+        "ES", "PT", "DK", "NO", "SE", "PL", "CZ", "HU", "SK", "SI",
+        "HR", "BA", "RS", "ME", "AL", "MK", "GR", "US", "JP", "AU",
+      ].map((countryCode, index) => ({
+        countryCode,
+        postCount: (index % 4) + 1,
+      })),
+    });
+
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+
+    // Albania and North Macedonia, measured across every close pair on this
+    // map as the tightest of the lot: 1.63px between centres at rest, needing
+    // 10.35x to separate two 16.8px tap targets. Asserting on the WORST pair is
+    // the point — an easier one would pass at a ceiling that still left this
+    // one untappable, which is exactly the bug James reported on #45.
+    const first = page.getByRole("button", { name: /from AL$/ });
+    const second = page.getByRole("button", { name: /from MK$/ });
+
+    // boundingBox does not wait for the first render; a bare read here raced it.
+    await expect(first).toBeVisible();
+
+    const gap = async () => {
+      const a = (await first.boundingBox())!;
+      const b = (await second.boundingBox())!;
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+
+    // The bar is the tap target, not the drawn circle. Two badges can be
+    // visually distinguishable and still share every pixel you could press,
+    // and "I can see it but I cannot open it" is the same complaint.
+    const target = (await first.boundingBox())!.width;
+
+    // At rest these two overlap: their centres are closer together than one
+    // badge is wide, which is exactly the complaint.
+    const crowded = await gap();
+    expect(crowded).toBeLessThan(target);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-crowded.png",
+      fullPage: true,
+    });
+
+    // Pinch into the knot rather than the middle of the ocean, and address it by
+    // coordinate rather than by locator: at this density a neighbouring badge
+    // sits on top of this one and would intercept anything aimed at it — which
+    // is the strongest statement of the problem. Crowded pins are not merely
+    // hard to read, they are untappable.
+    const knot = (await first.boundingBox())!;
+
+    // Deliberately spread further than the ceiling allows, so this pins the
+    // ceiling itself rather than one gesture's arithmetic.
+    await pinch(map, {
+      x: knot.x + knot.width / 2,
+      y: knot.y + knot.height / 2,
+      factor: 20,
+    });
+    await expect(map).toHaveAttribute("data-scale", MAX_SCALE.toFixed(3));
+
+    // Separated far enough to tap either one — and the badge itself has not
+    // grown while that happened, or nothing would have been gained.
+    expect(await gap()).toBeGreaterThan(target);
+    expect((await first.boundingBox())!.width).toBeCloseTo(target, 1);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-crowded-zoomed.png",
+      fullPage: true,
+    });
+  });
+
   test("tapping a map badge opens that country s feed", async ({ page }) => {
     await page.goto("./map");
 
@@ -244,12 +406,65 @@ test.describe("the app", () => {
     await expect(page.getByRole("option", { name: /Japan/ })).toHaveCount(0);
   });
 
+  test("picking a country fills the search box with it", async ({ page }) => {
+    await page.goto("./post");
+
+    const search = page.getByLabel("Search countries");
+    await search.fill("irel");
+    await page.getByRole("option", { name: /Ireland/ }).click();
+
+    // The box now reads as "what this post is tagged with" rather than as a
+    // search someone ran a minute ago and forgot about.
+    await expect(search).toHaveValue("Ireland");
+    await expect(page.getByRole("option", { name: /Ireland/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  test("searching again drops the country that was already picked", async ({
+    page,
+  }) => {
+    await page.goto("./post");
+
+    const search = page.getByLabel("Search countries");
+    await search.fill("fran");
+    await page.getByRole("option", { name: /France/ }).click();
+    await expect(search).toHaveValue("France");
+
+    // The trap James named on #46: search for somewhere else, don't tap a
+    // result, post anyway. Without this the post is still tagged France while
+    // the box says Germany, and nothing on screen admits it.
+    await search.fill("germ");
+    await expect(
+      page.getByRole("option", { name: /Germany/ }),
+    ).toHaveAttribute("aria-selected", "false");
+
+    // Attach a photo so the submit gets past the photo check and reaches the
+    // country one — otherwise this would assert on the photo error and pass
+    // whether or not the selection was ever cleared.
+    await page.locator("input[type=file]").setInputFiles({
+      name: "drink.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    });
+
+    await page.getByRole("button", { name: "Post it" }).click();
+    await expect(page.getByRole("alert")).toHaveText(/where the drink is from/i);
+  });
+
   test("posting without a photo explains what is missing", async ({ page }) => {
     await page.goto("./post");
 
     await page.getByRole("button", { name: "Post it" }).click();
 
-    await expect(page.getByRole("alert")).toHaveText(/photo/i);
+    // "with the drink", not "of the drink" — #46.
+    await expect(page.getByRole("alert")).toHaveText(
+      "Take a photo with the drink first.",
+    );
   });
 });
 
@@ -315,6 +530,114 @@ test.describe("admin", () => {
       path: "e2e/screenshots/admin.png",
       fullPage: true,
     });
+  });
+
+  /**
+   * The cooldown James asked for on #44. Driven end to end here rather than as a
+   * unit test on purpose: CI runs the e2e suite and does not yet run the vitest
+   * one (ATW#37), so this is the only place the behaviour is actually guarded.
+   */
+  test("a second Next pub inside the cooldown asks before it moves", async ({
+    page,
+  }) => {
+    const sent: unknown[] = [];
+
+    // The server refuses the second advance and says why. Fulfilled here so the
+    // spec drives the client's half of the contract; the refusal itself is
+    // pinned by AdminApiTests.
+    await page.route("**/birthday/api/admin/stop/next", (route) => {
+      const body = route.request().postDataJSON() as { force?: boolean };
+      sent.push(body);
+
+      // Mirrors PubStopService: the first advance of the round is never
+      // questioned, a later one inside the cooldown is refused, and `force` is
+      // the way through. Honouring force here is the point — a fixture that
+      // refused everything would pass while the override was broken.
+      if (sent.length === 1 || body?.force) return route.fulfill({ json: 3 });
+
+      return route.fulfill({
+        status: 409,
+        contentType: "application/problem+json",
+        json: {
+          detail: "You moved to stop 3 2 minutes ago. Move on to stop 4 anyway?",
+        },
+      });
+    });
+
+    await page.goto("./admin");
+    await page.getByLabel("Admin key").fill("dev-admin-key");
+    await page.getByRole("button", { name: "Unlock" }).click();
+
+    const nextPub = page.getByRole("button", { name: "🍺 Next pub" });
+
+    await nextPub.click();
+    await expect(page.getByRole("status")).toHaveText("Next pub — done");
+
+    // Decline the second one. The dialog has to carry the server's sentence:
+    // only the server knows when the last tap was.
+    let asked: string | null = null;
+    page.once("dialog", (dialog) => {
+      asked = dialog.message();
+      return dialog.dismiss();
+    });
+
+    await nextPub.click();
+    await expect(page.getByRole("status")).toHaveText(
+      "Next pub — left where it was",
+    );
+    expect(asked).toBe(
+      "You moved to stop 3 2 minutes ago. Move on to stop 4 anyway?",
+    );
+
+    // Declining sent no third request: the stop is where it was, not advanced
+    // and then apologised for.
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toEqual({});
+    expect(sent[1]).toEqual({});
+
+    // Accepting is the only thing that forces it. This is the half that stops
+    // the guard becoming a lock — there is no undo, so it must never be able to
+    // strand him at the wrong stop.
+    page.once("dialog", (dialog) => dialog.accept());
+    await nextPub.click();
+
+    await expect(page.getByRole("status")).toHaveText("Next pub — done");
+    expect(sent).toHaveLength(4);
+    expect(sent[3]).toEqual({ force: true });
+  });
+
+  test("a Next pub failure that is not the cooldown is never forced", async ({
+    page,
+  }) => {
+    const sent: unknown[] = [];
+
+    // A 404 — no round in progress. Retrying this with force would be the
+    // client deciding a real failure was a formality.
+    await page.route("**/birthday/api/admin/stop/next", (route) => {
+      sent.push(route.request().postDataJSON());
+      return route.fulfill({
+        status: 404,
+        contentType: "application/problem+json",
+        json: { detail: "There is no round in progress." },
+      });
+    });
+
+    let dialogs = 0;
+    page.on("dialog", (dialog) => {
+      dialogs += 1;
+      return dialog.accept();
+    });
+
+    await page.goto("./admin");
+    await page.getByLabel("Admin key").fill("dev-admin-key");
+    await page.getByRole("button", { name: "Unlock" }).click();
+    await page.getByRole("button", { name: "🍺 Next pub" }).click();
+
+    await expect(page.getByRole("status")).toHaveText(
+      "There is no round in progress.",
+    );
+    expect(dialogs).toBe(0);
+    expect(sent).toHaveLength(1);
   });
 
   test("renaming needs both boxes, and retargets onto the new name", async ({

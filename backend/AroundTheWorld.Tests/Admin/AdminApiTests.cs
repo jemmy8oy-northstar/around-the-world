@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AroundTheWorld.Tests.Auth;
 using AroundTheWorld.Tests.Posts;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace AroundTheWorld.Tests.Admin;
@@ -85,11 +86,98 @@ public class AdminApiTests
 
         var first = await (await admin.PostAsJsonAsync("/api/admin/stop/next", new { }))
             .Content.ReadFromJsonAsync<int>(Json);
+
+        // Past the cooldown, so this asserts the ordinary case rather than the
+        // guard. The two used to run back to back; that they no longer can is
+        // the change.
+        factory.Clock.Advance(TimeSpan.FromMinutes(6));
+
         var second = await (await admin.PostAsJsonAsync("/api/admin/stop/next", new { }))
             .Content.ReadFromJsonAsync<int>(Json);
 
         Assert.Equal(2, first);
         Assert.Equal(3, second);
+    }
+
+    [Fact]
+    public async Task A_second_advance_inside_five_minutes_is_refused()
+    {
+        using var factory = new GameApiFactory();
+        var admin = AdminClient(factory);
+
+        await admin.PostAsJsonAsync("/api/admin/stop/next", new { });
+        factory.Clock.Advance(TimeSpan.FromMinutes(2));
+
+        var response = await admin.PostAsJsonAsync("/api/admin/stop/next", new { });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+        // The refusal has to say which tap it is talking about and offer the way
+        // through, because it is read once, on a phone, in a pub.
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(Json);
+        Assert.Contains("stop 2", problem!.Detail);
+        Assert.Contains("2 minutes ago", problem.Detail);
+        Assert.Contains("stop 3 anyway?", problem.Detail);
+
+        // And it did not half-happen: the refused call left the stop alone.
+        await factory.WithDbAsync(async db =>
+            Assert.Equal(2, (await db.Rounds.SingleAsync(r => r.EndedAt == null)).CurrentStopNumber));
+    }
+
+    [Fact]
+    public async Task A_refused_advance_goes_through_when_forced()
+    {
+        using var factory = new GameApiFactory();
+        var admin = AdminClient(factory);
+
+        await admin.PostAsJsonAsync("/api/admin/stop/next", new { });
+        factory.Clock.Advance(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            (await admin.PostAsJsonAsync("/api/admin/stop/next", new { })).StatusCode);
+
+        // Same instant, same round — only the admin's confirmation differs. The
+        // guard must never be able to strand him at the wrong stop, because
+        // there is no way back short of restarting the whole round.
+        var forced = await admin.PostAsJsonAsync("/api/admin/stop/next", new { force = true });
+
+        Assert.Equal(HttpStatusCode.OK, forced.StatusCode);
+        Assert.Equal(3, await forced.Content.ReadFromJsonAsync<int>(Json));
+    }
+
+    [Fact]
+    public async Task The_first_advance_of_a_round_is_never_questioned()
+    {
+        using var factory = new GameApiFactory();
+        var admin = AdminClient(factory);
+
+        // A fresh round has no previous advance to have mis-tapped against. If
+        // the cooldown keyed off StartedAt instead, this would be refused —
+        // locking the night out of its own first pub for five minutes.
+        var response = await admin.PostAsJsonAsync("/api/admin/stop/next", new { });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, await response.Content.ReadFromJsonAsync<int>(Json));
+    }
+
+    [Fact]
+    public async Task Starting_a_new_round_clears_the_cooldown()
+    {
+        using var factory = new GameApiFactory();
+        var admin = AdminClient(factory);
+
+        await admin.PostAsJsonAsync("/api/admin/stop/next", new { });
+        factory.Clock.Advance(TimeSpan.FromSeconds(10));
+
+        await admin.PostAsJsonAsync("/api/admin/round", new { });
+
+        // The new round is a new night. Carrying the old round's timestamp over
+        // would refuse its very first advance for no reason anyone could see.
+        var response = await admin.PostAsJsonAsync("/api/admin/stop/next", new { });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, await response.Content.ReadFromJsonAsync<int>(Json));
     }
 
     [Fact]

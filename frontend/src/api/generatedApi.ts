@@ -58,7 +58,11 @@ const injectedRtkApi = api.injectEndpoints({
       AdvancePubStopApiResponse,
       AdvancePubStopApiArg
     >({
-      query: () => ({ url: `/api/admin/stop/next`, method: "POST" }),
+      query: (queryArg) => ({
+        url: `/api/admin/stop/next`,
+        method: "POST",
+        body: queryArg.advanceStopRequest,
+      }),
     }),
     startNewRound: build.mutation<
       StartNewRoundApiResponse,
@@ -157,7 +161,9 @@ export type GetCountryTallyApiArg = void;
 export type RecordChannelVisitApiResponse = unknown;
 export type RecordChannelVisitApiArg = void;
 export type AdvancePubStopApiResponse = /** status 200 OK */ number;
-export type AdvancePubStopApiArg = void;
+export type AdvancePubStopApiArg = {
+  advanceStopRequest: AdvanceStopRequest;
+};
 export type StartNewRoundApiResponse = /** status 200 OK */ number;
 export type StartNewRoundApiArg = {
   startRoundRequest: StartRoundRequest;
@@ -233,6 +239,9 @@ export type IFormFile = Blob;
 export type CountryTally = {
   countryCode: string;
   postCount?: number;
+};
+export type AdvanceStopRequest = {
+  force?: boolean;
 };
 export type StartRoundRequest = {
   name?: null | string;

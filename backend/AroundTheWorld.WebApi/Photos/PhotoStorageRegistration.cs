@@ -41,6 +41,16 @@ public static class PhotoStorageRegistration
                 // OCI's S3 compatibility layer does not support virtual-host style
                 // bucket addressing, so requests must be path-style.
                 ForcePathStyle = true,
+
+                // AWS SDK v4 computes a CRC32 checksum on every upload by default
+                // and sends it as x-amz-sdk-checksum-algorithm. OCI's S3 layer does
+                // not implement that header and answers 501 NotImplemented — which
+                // is what every photo upload got on 27 Aug, while GetObject (no
+                // checksum header, no body) worked with the same key pair and made
+                // it look like a permissions problem. WHEN_REQUIRED sends a checksum
+                // only for the operations that genuinely mandate one.
+                RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+                ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED,
             }));
 
         services.AddScoped<IPhotoStorage, ObjectStoragePhotoStorage>();

@@ -41,6 +41,61 @@ async function pinch(
 }
 
 /**
+ * The same spread, but delivered the way a finger delivers it: as a stream of
+ * small touchmoves rather than one jump.
+ *
+ * This is the gesture James was actually making on #45 ("it becomes harder and
+ * harder to zoom once you are zoomed in"), and the single-move `pinch` above
+ * cannot see the defect it exposes — every increment has to survive, and if the
+ * component recomputes each one from a state value that has not caught up yet,
+ * all but the last are silently discarded. A real pinch is ~30 moves, so that
+ * loses almost the whole gesture.
+ *
+ * `steps` is deliberately larger than one animation frame's worth: the point is
+ * for several moves to land between renders.
+ */
+async function pinchGradually(
+  target: Locator,
+  {
+    x,
+    y,
+    factor,
+    steps = 30,
+    drift = 0,
+  }: {
+    x: number;
+    y: number;
+    factor: number;
+    steps?: number;
+    /** Client pixels the whole hand slides right over the gesture. */
+    drift?: number;
+  },
+): Promise<void> {
+  await target.evaluate((element, { x, y, factor, steps, drift }) => {
+    const fire = (type: string, touches: { clientX: number; clientY: number }[]) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "touches", { value: touches });
+      element.dispatchEvent(event);
+    };
+
+    const spread = (radius: number, shift: number) => [
+      { clientX: x - radius + shift, clientY: y },
+      { clientX: x + radius + shift, clientY: y },
+    ];
+
+    fire("touchstart", spread(60, 0));
+
+    // Geometric steps, so each move carries the same ratio — that is what a
+    // pinch actually is, and it makes the expected total exactly `factor`.
+    for (let step = 1; step <= steps; step += 1) {
+      fire("touchmove", spread(60 * factor ** (step / steps), (drift * step) / steps));
+    }
+
+    fire("touchend", []);
+  }, { x, y, factor, steps, drift });
+}
+
+/**
  * Smoke + screenshot coverage for the whole app, driven off mocked API
  * responses (see mocks.ts) so it needs no backend and renders identically every
  * run. Each test asserts the key content, then captures a phone-viewport
@@ -270,6 +325,127 @@ test.describe("the app", () => {
 
     await page.getByRole("button", { name: "Reset map" }).click();
     await expect(map).toHaveAttribute("data-scale", "1.000");
+  });
+
+  test("a pinch delivered a finger's worth at a time keeps all of its zoom", async ({
+    page,
+  }) => {
+    // James, #45: "for some reason it becomes harder and harder to zoom once you
+    // are zoomed in". A finger sends ~30 touchmoves per gesture; if the map
+    // recomputes each from a stale scale, only the last increment survives and
+    // a 4x spread lands somewhere near 1.05x. Nothing in the single-move test
+    // above can catch that, because one move has nothing to lose.
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+    const frame = (await map.boundingBox())!;
+    const centre = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
+
+    await pinchGradually(map, { ...centre, factor: 4 });
+    expect(Number(await map.getAttribute("data-scale"))).toBeCloseTo(4, 1);
+
+    // And again from where it left off — his complaint is specifically about the
+    // second pinch, once already zoomed. 4x then 2x is 8x, not 4x-and-a-bit.
+    await pinchGradually(map, { ...centre, factor: 2 });
+    expect(Number(await map.getAttribute("data-scale"))).toBeCloseTo(8, 1);
+  });
+
+  test("a pinch that drifts carries the map with it", async ({ page }) => {
+    // James, #45: "maybe it needs to support some kind of two finger pan zoom
+    // combo so that when ur fingers move slightly during the zoom it isn't
+    // having to fix directly". Two fingers used to only ever zoom — the hand
+    // sliding across the glass was thrown away, so the map appeared to correct
+    // itself back against the gesture.
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+    const badge = page.getByRole("button", { name: "2 from IE" });
+    await expect(badge).toBeVisible();
+
+    const frame = (await map.boundingBox())!;
+    const centre = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
+    const DRIFT = 50;
+
+    await pinchGradually(map, { ...centre, factor: 3 });
+    const still = (await badge.boundingBox())!.x;
+
+    await page.getByRole("button", { name: "Reset map" }).click();
+    await expect(map).toHaveAttribute("data-scale", "1.000");
+
+    await pinchGradually(map, { ...centre, factor: 3, drift: DRIFT });
+    const drifted = (await badge.boundingBox())!.x;
+
+    // Same zoom either way — the drift must not be paid for out of the scale.
+    expect(Number(await map.getAttribute("data-scale"))).toBeCloseTo(3, 1);
+
+    // And the map has come with the hand, roughly pixel for pixel.
+    expect(drifted - still).toBeGreaterThan(DRIFT * 0.7);
+    expect(drifted - still).toBeLessThan(DRIFT * 1.3);
+  });
+
+  test("the map grows into the space below it instead of shoving it down", async ({
+    page,
+  }) => {
+    // Two of James's #45 notes at once: "it staying in the same horizontal box
+    // feels like a missed opportunity, it could expand into the vertical space
+    // available", and "the image should be z axis above the text directly
+    // below it". Growing the element in flow would satisfy the first and
+    // reflow the page under his fingers on every frame of the pinch.
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+    const hint = page.getByText(/countries so far/);
+    await expect(hint).toBeVisible();
+
+    const restingMap = (await map.boundingBox())!;
+    const restingHint = (await hint.boundingBox())!;
+
+    await pinchGradually(map, {
+      x: restingMap.x + restingMap.width / 2,
+      y: restingMap.y + restingMap.height / 2,
+      factor: 4,
+    });
+
+    const zoomedMap = (await map.boundingBox())!;
+
+    // Taller, and no wider — the extra pixels come from the empty space under
+    // the map, not from stretching it.
+    expect(zoomedMap.height).toBeGreaterThan(restingMap.height * 1.5);
+    expect(zoomedMap.width).toBeCloseTo(restingMap.width, 0);
+
+    // The text under it has not moved: the map is over it, not pushing it.
+    expect((await hint.boundingBox())!.y).toBeCloseTo(restingHint.y, 0);
+    expect(zoomedMap.y + zoomedMap.height).toBeGreaterThan(restingHint.y);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-grown.png",
+      fullPage: true,
+    });
+
+    await page.getByRole("button", { name: "Reset map" }).click();
+    await expect(map).toHaveAttribute("data-scale", "1.000");
+    expect((await map.boundingBox())!.height).toBeCloseTo(restingMap.height, 0);
+  });
+
+  test("a pinch stretched past the limit springs back to it", async ({ page }) => {
+    // James, #45: "allow the image to zoom out of its confines then if it's too
+    // zoomed out it just snaps back to the max zoom out view". The point is the
+    // feel — a hard stop mid-gesture reads as the map fighting the hand.
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+    const frame = (await map.boundingBox())!;
+
+    // Squeeze inwards from rest, which is already the floor.
+    await pinchGradually(map, {
+      x: frame.x + frame.width / 2,
+      y: frame.y + frame.height / 2,
+      factor: 0.2,
+    });
+
+    // It comes back to the floor on its own, with no reset tapped.
+    await expect(map).toHaveAttribute("data-scale", "1.000");
+    await expect(page.getByRole("button", { name: "Reset map" })).toHaveCount(0);
   });
 
   test("a crowded map can be pinched apart", async ({ page }) => {

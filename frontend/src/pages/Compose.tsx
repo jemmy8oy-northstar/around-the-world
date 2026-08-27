@@ -5,7 +5,7 @@ import { useCreateDrinkPostMutation } from "../api/customApi";
 import { CountryPicker } from "../components/CountryPicker";
 import { EmptyState } from "../components/EmptyState";
 import { compressImage } from "../photos/compressImage";
-import { problemDetail } from "../api/problemDetail";
+import { failureMessage } from "../api/problemDetail";
 import "./Compose.css";
 
 export default function Compose() {
@@ -56,7 +56,7 @@ export default function Compose() {
 
       navigate("/");
     } catch (caught) {
-      setError(problemDetail(caught) ?? "That didn't send — try again.");
+      setError(failureMessage(caught, "That didn't send — try again."));
     }
   }
 

@@ -86,7 +86,31 @@ export async function mockApi(
     bannedUsernames = [],
   } = options;
 
-  await page.route("**/api/game", (route) =>
+  // Registered FIRST, so every specific route below out-ranks it (Playwright
+  // uses the last matching route). This is the guard for the bug that took the
+  // first production deploy down: the app is served under /birthday/, but the
+  // client was requesting /api/... at the site root. The mocks below used to be
+  // globbed as `**\/api/game`, which the WRONG url satisfies just as well as the
+  // right one — so the suite was green over an app that 404'd every call.
+  //
+  // Anything reaching this route is an API call that lost its base path. Failing
+  // it hard beats fulfilling it: a silent 200 here is exactly the false green
+  // this guard exists to stop.
+  await page.route(
+    // Deliberately narrow: a root-relative "/api/..." IS the bug, and a looser
+    // match on "/api/" anywhere catches Vite's own module URLs in dev
+    // (/birthday/src/api/emptyApi.ts) and blocks the app from loading at all.
+    (url) => url.pathname.startsWith("/api/"),
+    (route) => {
+      console.error(
+        `API call escaped the base path: ${route.request().url()} — ` +
+          `expected /birthday/api/... See src/api/basePath.ts.`,
+      );
+      return route.abort("failed");
+    },
+  );
+
+  await page.route("**/birthday/api/game", (route) =>
     route.fulfill({
       json: {
         mode,
@@ -99,15 +123,15 @@ export async function mockApi(
     }),
   );
 
-  await page.route("**/api/auth/join", (route) =>
+  await page.route("**/birthday/api/auth/join", (route) =>
     route.fulfill({ json: SESSION }),
   );
-  await page.route("**/api/auth/refresh", (route) =>
+  await page.route("**/birthday/api/auth/refresh", (route) =>
     route.fulfill({ json: SESSION }),
   );
 
   // Query string included, so the per-country feed is matched too.
-  await page.route("**/api/posts**", (route) => {
+  await page.route("**/birthday/api/posts**", (route) => {
     if (route.request().method() !== "GET")
       return route.fulfill({ status: 201, json: posts[0] });
 
@@ -121,10 +145,10 @@ export async function mockApi(
     return route.fulfill({ json: filtered });
   });
 
-  await page.route("**/api/countries", (route) =>
+  await page.route("**/birthday/api/countries", (route) =>
     route.fulfill({ json: tally }),
   );
-  await page.route("**/api/admin/**", (route) =>
+  await page.route("**/birthday/api/admin/**", (route) =>
     route.fulfill({ status: 200, json: 3 }),
   );
 
@@ -132,7 +156,7 @@ export async function mockApi(
   // route answers with — Playwright uses the last matching route, and this one
   // has to win. Without it the banned-users query would hand the feed a `3`
   // where it expects a list of names.
-  await page.route("**/api/admin/users/banned", (route) =>
+  await page.route("**/birthday/api/admin/users/banned", (route) =>
     route.fulfill({ json: bannedUsernames }),
   );
 }

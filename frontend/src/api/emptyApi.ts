@@ -6,13 +6,19 @@ import {
   type FetchBaseQueryError,
 } from "@reduxjs/toolkit/query/react";
 import { Mutex } from "./mutex";
+import { basePath } from "./basePath";
 import { readSession, writeSession, clearSession } from "../auth/tokenStorage";
 import { sessionEnded, sessionEstablished } from "../auth/sessionSlice";
 
 const rawBaseQuery = fetchBaseQuery({
-  // The generated endpoint URLs already carry the /api prefix, so this must stay
-  // at the root or every request goes to /api/api/...
-  baseUrl: "/",
+  // The generated endpoint URLs already carry the /api prefix, so this must be
+  // the deployment's base path and nothing more, or requests go to
+  // /birthday/api/api/...
+  //
+  // It must ALSO not be "/", which is what shipped first and 404'd every call:
+  // the app lives under /birthday/, so a root-relative /api/... lands on the
+  // portfolio at balenthiran.co.uk/api/... See basePath.ts.
+  baseUrl: basePath,
   prepareHeaders: (headers) => {
     const session = readSession();
     if (session) headers.set("Authorization", `Bearer ${session.accessToken}`);

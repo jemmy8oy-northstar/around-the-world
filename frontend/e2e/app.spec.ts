@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { mockApi, signIn, signInAsAdmin } from "./mocks";
+import { MAX_SCALE } from "../src/components/mapZoom";
 
 /**
  * Smoke + screenshot coverage for the whole app, driven off mocked API
@@ -186,6 +187,120 @@ test.describe("the app", () => {
     await expect(page.getByRole("button", { name: "2 from IE" })).toBeVisible();
 
     await page.screenshot({ path: "e2e/screenshots/map.png", fullPage: true });
+  });
+
+  test("zooming the map spreads the badges without inflating them", async ({
+    page,
+  }) => {
+    await page.goto("./map");
+
+    const badge = page.getByRole("button", { name: "2 from IE" });
+    const other = page.getByRole("button", { name: /from IN$/ });
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+
+    const before = (await badge.boundingBox())!;
+    const gapBefore = (await other.boundingBox())!.x - before.x;
+
+    // A wheel event is the desktop form of the same gesture and the only one a
+    // test can drive; the pinch path shares every line of it below toViewBox.
+    // Modest, and about the centre, so both badges stay inside the viewBox —
+    // a badge scrolled off the edge would make this assert nothing.
+    await map.hover();
+    await page.mouse.wheel(0, -450);
+
+    await expect(map).not.toHaveAttribute("data-scale", "1.000");
+    const scale = Number(await map.getAttribute("data-scale"));
+    expect(scale).toBeGreaterThan(1.1);
+
+    const after = (await badge.boundingBox())!;
+    const gapAfter = (await other.boundingBox())!.x - after.x;
+
+    // Countries move apart by exactly the zoom factor. Tied to the reported
+    // scale rather than a fixed number, because a browser divides the wheel
+    // delta it reports by the device pixel ratio — a hardcoded expectation here
+    // would quietly encode this one phone's DPR of 3.
+    expect(gapAfter / gapBefore).toBeCloseTo(scale, 1);
+
+    // And a badge stays exactly the size it was, which is the actual
+    // requirement: magnifying the cluster along with the map separates nothing.
+    expect(after.width).toBeCloseTo(before.width, 1);
+    expect(after.height).toBeCloseTo(before.height, 1);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-zoomed.png",
+      fullPage: true,
+    });
+
+    await page.getByRole("button", { name: "Reset map" }).click();
+    await expect(map).toHaveAttribute("data-scale", "1.000");
+  });
+
+  test("a crowded map can be pinched apart", async ({ page }) => {
+    // The case worth designing for: a party that really does drink its way
+    // around the world ends up with a knot of badges over Europe, where the
+    // countries are small and close. Three fixture pins never show this.
+    await mockApi(page, {
+      tally: [
+        "GB", "IE", "FR", "DE", "NL", "BE", "LU", "CH", "AT", "IT",
+        "ES", "PT", "DK", "NO", "SE", "PL", "CZ", "HU", "GR", "HR",
+        "US", "MX", "BR", "AR", "JP", "IN", "AU", "ZA", "KE", "TH",
+      ].map((countryCode, index) => ({
+        countryCode,
+        postCount: (index % 4) + 1,
+      })),
+    });
+
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+    const nl = page.getByRole("button", { name: /from NL$/ });
+    const be = page.getByRole("button", { name: /from BE$/ });
+
+    const gap = async () => {
+      const a = (await nl.boundingBox())!;
+      const b = (await be.boundingBox())!;
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+
+    // The bar is the tap target, not the drawn circle. Two badges can be
+    // visually distinguishable and still share every pixel you could press,
+    // and "I can see it but I cannot open it" is the same complaint.
+    const target = (await nl.boundingBox())!.width;
+
+    // At rest these two overlap: their centres are closer together than one
+    // badge is wide, which is exactly the complaint.
+    const crowded = await gap();
+    expect(crowded).toBeLessThan(target);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-crowded.png",
+      fullPage: true,
+    });
+
+    // Pinch into the knot rather than the middle of the ocean. Moved by
+    // coordinate rather than .hover(), because at this density a neighbouring
+    // badge sits on top of NL and intercepts the pointer — which is the
+    // strongest statement of the problem: crowded pins are not merely hard to
+    // read, they are untappable.
+    const knot = (await nl.boundingBox())!;
+    await page.mouse.move(knot.x + knot.width / 2, knot.y + knot.height / 2);
+
+    // Deliberately far more delta than the ceiling needs, so this pins the
+    // ceiling rather than one browser's wheel arithmetic: the delta a browser
+    // reports is divided by the device pixel ratio, so a delta tuned to land
+    // just short of MAX_SCALE would encode this one phone's DPR of 3.
+    await page.mouse.wheel(0, -8000);
+    await expect(map).toHaveAttribute("data-scale", String(MAX_SCALE.toFixed(3)));
+
+    // Separated far enough to tap either one — and the badge itself has not
+    // grown while that happened, or nothing would have been gained.
+    expect(await gap()).toBeGreaterThan(target);
+    expect((await nl.boundingBox())!.width).toBeCloseTo(target, 1);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-crowded-zoomed.png",
+      fullPage: true,
+    });
   });
 
   test("tapping a map badge opens that country s feed", async ({ page }) => {

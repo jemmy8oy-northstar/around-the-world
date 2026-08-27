@@ -1,11 +1,46 @@
 .worldmap-zoom {
   position: relative;
+
+  /* The footprint the map occupies in the page, held at its RESTING shape. The
+     map itself grows taller as it is zoomed (viewBoxHeight in mapZoom.ts) and
+     is taken out of flow below, so that growth spills over the text underneath
+     instead of shoving it down the page mid-pinch. Reflowing on every frame of
+     a gesture is the kind of movement that makes a zoom feel unsteady, and
+     James asked for the map to sit "z axis above the text directly below it"
+     anyway (#45). */
+  aspect-ratio: 800 / 380;
+  z-index: 1;
+
+  /* A world map is inherently wide, so at desktop widths the grown height would
+     run to most of a laptop screen. This is a phone app; bound it. */
+  max-width: 34rem;
+  margin-inline: auto;
 }
 
 .worldmap {
+  position: absolute;
+  inset-inline: 0;
+
+  /* Grows about its own centre rather than downwards from the top. The map page
+     centres its content in the height left between the banner and the tab bar,
+     so a box that only ever grew down would walk the map off that centre and
+     into the tab bar as it was zoomed. Expanding both ways keeps it where the
+     eye already is. */
+  inset-block-start: 50%;
+  translate: 0 -50%;
+
+  /* height: auto against a viewBox that grows is what makes the element grow —
+     no transition needed, because every frame of the gesture sets both. */
   width: 100%;
   height: auto;
   display: block;
+
+  /* The same colour the page already shows through as ocean, so this changes
+     nothing at rest — but an SVG is transparent between its paths, and once the
+     map grows over the line of text beneath it the words read straight through
+     the Atlantic. Being above something in the stacking order only hides it if
+     there is something there to hide it with. */
+  background: var(--bg-page);
 
   /* The map handles its own pinch and drag. Without this the browser's page
      zoom and scroll win the gesture first, and the handlers never see it. */

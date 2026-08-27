@@ -23,7 +23,7 @@ apps:
   - name: backend
     image:
       repository: lhr.ocir.io/lr7uc6l49odc/around-the-world-backend # Update at scaffold time
-      tag: 0.1.16
+      tag: 0.1.18
       pullPolicy: Always
     containerPort: 8080
     replicas: 1
@@ -96,7 +96,7 @@ apps:
   - name: frontend
     image:
       repository: lhr.ocir.io/lr7uc6l49odc/around-the-world-frontend # Update at scaffold time
-      tag: 0.1.16
+      tag: 0.1.18
       pullPolicy: Always
     containerPort: 80
     replicas: 1

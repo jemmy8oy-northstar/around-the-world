@@ -237,6 +237,99 @@ test.describe("the app", () => {
     await signIn(page);
   });
 
+  test("a post shows the whole photo, not a crop of it", async ({ page }) => {
+    // James, #51: "images on posts are getting cropped… you can't frame the
+    // photo well. I think we just don't crop the photos".
+    //
+    // Every fixture post carries photoUrl: "", so until now the feed tests only
+    // ever rendered the "photo unavailable" placeholder — no test in the suite
+    // had ever put a real image in a card, which is why a crop this obvious was
+    // invisible to all of them. This serves one.
+    //
+    // 9:16, because that is the tallest shape a phone camera actually produces
+    // and therefore the case that has to survive: it is the one that hits the
+    // height cap and gets inset at the sides.
+    //
+    // And at 900x1600, not 90x160, because the photo has to be BIGGER than the
+    // card for the card to bound it — which is what compressImage guarantees by
+    // capping the long edge at 1600 rather than by enlarging anything. A 90px
+    // fixture renders at its own natural size, whereupon "not cropped" and
+    // "under the height cap" are both true of a thumbnail and the test asserts
+    // nothing at all.
+    const NATURAL = { width: 900, height: 1600 };
+
+    await page.route("**/birthday/api/photos/tall.svg", (route) =>
+      route.fulfill({
+        contentType: "image/svg+xml",
+        body:
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${NATURAL.width}" ` +
+          `height="${NATURAL.height}"><rect width="${NATURAL.width}" ` +
+          `height="${NATURAL.height}" fill="#c1440e"/></svg>`,
+      }),
+    );
+
+    await mockApi(page, {
+      posts: [
+        {
+          id: "00000000-0000-0000-0000-000000000009",
+          userId: "44444444-4444-4444-4444-444444444444",
+          username: "Nadia",
+          photoUrl: "/api/photos/tall.svg",
+          caption: "Portrait, and all of it",
+          countryCode: "PT",
+          stopNumber: 1,
+          createdAt: "2026-08-26T20:00:00Z",
+        },
+      ],
+    });
+
+    await page.goto("./");
+
+    const photo = page.locator(".post__photo");
+    await expect(photo).toBeVisible();
+
+    const shape = await photo.evaluate((img: HTMLImageElement) => ({
+      naturalRatio: img.naturalWidth / img.naturalHeight,
+      renderedRatio: img.clientWidth / img.clientHeight,
+      renderedHeight: img.clientHeight,
+    }));
+
+    // The whole assertion: the box the photo is drawn in has the photo's own
+    // shape. object-fit: cover keeps this element's ratio at the FRAME's and
+    // throws the difference away off the top and bottom.
+    expect(shape.naturalRatio).toBeCloseTo(NATURAL.width / NATURAL.height, 2);
+    expect(shape.renderedRatio).toBeCloseTo(shape.naturalRatio, 2);
+
+    // Bounded, or one post would swallow the whole feed — and bounded AT the
+    // cap rather than merely under it. The "under it" half alone is satisfied
+    // by a thumbnail: leaving object-fit: cover on kept the shape right (the
+    // wrapper enforces that) while rendering the photo at 164px instead of
+    // 243px wide, and a <= assertion was green over it.
+    expect(shape.renderedHeight).toBeCloseTo(
+      page.viewportSize()!.height * 0.65,
+      0,
+    );
+
+    // A photo that hit the cap is narrower than the card, so the country stamp
+    // has to be franked onto the PHOTO — anchored to the frame it would sit out
+    // on the card's background next to it.
+    const photoBox = (await photo.boundingBox())!;
+    const stamp = (await page.locator(".post__country").boundingBox())!;
+
+    expect(stamp.x).toBeGreaterThanOrEqual(photoBox.x - 1);
+    expect(stamp.x + stamp.width).toBeLessThanOrEqual(
+      photoBox.x + photoBox.width + 1,
+    );
+    expect(stamp.y + stamp.height).toBeLessThanOrEqual(
+      photoBox.y + photoBox.height + 1,
+    );
+
+    await page.screenshot({
+      path: "e2e/screenshots/feed-uncropped.png",
+      fullPage: true,
+    });
+  });
+
   test("the feed groups drinks under pub-stop dividers", async ({ page }) => {
     await page.goto("./");
 

@@ -33,26 +33,51 @@
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   overflow: hidden;
 
-  /* An explicit height rather than aspect-ratio + max-height: capping the height
-     of an aspect-ratio box makes it shrink its WIDTH to keep the ratio, which
-     left a dead band down the side of every card. The photo is cropped to fill
-     via object-fit instead. Sized so a whole card plus the top of the next one
-     fits on screen — a full-width 4:5 photo alone eats a phone viewport and the
-     feed cannot be skimmed. */
-  height: clamp(15rem, 44dvh, 28rem);
+  /* No fixed height any more (#51 — "images on posts are getting cropped… you
+     can't frame the photo well"). The frame takes the photo's own shape, so
+     what got posted is what gets shown.
+     min-height does two jobs: it reserves a block of the card while the image
+     is still downloading, so a feed being scrolled does not jolt as each one
+     lands, and it gives the "photo unavailable" placeholder something to fill.
+     align-items: center rather than the flex default — stretch would pull an
+     auto-height <img> out of its own aspect ratio, which is the crop again by
+     another route. */
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--glass-hover-bg);
 }
 
+.post__shot {
+  /* Shrink-wraps the photo, so it IS the photo's box and the country stamp can
+     be positioned against it. display: flex rather than block so it takes its
+     child's width instead of the frame's, and kills the baseline gap an inline
+     <img> would otherwise leave beneath itself. */
+  position: relative;
+  display: flex;
+  max-width: 100%;
+}
+
 .post__photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  /* The whole photo: neither cropped to fill a shape nor letterboxed inside
+     one. The element takes the image's own dimensions and is bounded, rather
+     than being given a size to fit itself to.
+     The cap is the one real cost of not cropping — a 9:16 photo at full card
+     width is taller than a phone screen, and a feed where one post fills the
+     viewport cannot be skimmed. Past the cap the photo insets a little at the
+     sides instead of losing its top and bottom. */
+  max-width: 100%;
+  max-height: 65dvh;
+  width: auto;
+  height: auto;
   display: block;
 }
 
 .post__placeholder {
+  position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 12rem;
   display: flex;
   flex-direction: column;
   align-items: center;

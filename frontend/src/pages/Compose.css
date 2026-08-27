@@ -31,7 +31,13 @@
 .compose__preview {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+
+  /* contain, not cover (#51). The box keeps its height — the comment above is
+     still true, a taller capture area pushes the Post button off the screen —
+     but the preview's job is to be honest about what will be posted, and a
+     cropped preview is how you end up framing a shot against the wrong edges.
+     This shows the whole frame; the feed then shows the same whole frame. */
+  object-fit: contain;
 }
 
 .compose__photo-prompt {

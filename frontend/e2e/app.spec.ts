@@ -1,5 +1,44 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import { mockApi, signIn, signInAsAdmin } from "./mocks";
+import { MAX_SCALE } from "../src/components/mapZoom";
+
+/**
+ * Spreads two fingers apart on `target` by `factor`, centred on a client point.
+ *
+ * Playwright has no multi-touch gesture API, and the CI project is mobile
+ * WebKit, where `mouse.wheel` throws outright — so the events are dispatched
+ * from inside the page. They are built as plain cancelable Events carrying a
+ * `touches` array rather than real TouchEvents, because the TouchEvent and
+ * Touch constructors are not portable across WebKit and Chromium and this has
+ * to run on both. The map's handler reads exactly `touches[i].clientX/Y` and
+ * calls preventDefault, so that is the whole surface it needs.
+ *
+ * This drives the real pinch path — the gesture James asked for — rather than
+ * the wheel shorthand it used to, which no phone ever sends.
+ */
+async function pinch(
+  target: Locator,
+  { x, y, factor }: { x: number; y: number; factor: number },
+): Promise<void> {
+  await target.evaluate((element, { x, y, factor }) => {
+    const fire = (type: string, touches: { clientX: number; clientY: number }[]) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "touches", { value: touches });
+      element.dispatchEvent(event);
+    };
+
+    // Both fingers move symmetrically, so the midpoint — the point the map is
+    // held still under — is the same before and after.
+    const spread = (radius: number) => [
+      { clientX: x - radius, clientY: y },
+      { clientX: x + radius, clientY: y },
+    ];
+
+    fire("touchstart", spread(60));
+    fire("touchmove", spread(60 * factor));
+    fire("touchend", []);
+  }, { x, y, factor });
+}
 
 /**
  * Smoke + screenshot coverage for the whole app, driven off mocked API
@@ -186,6 +225,129 @@ test.describe("the app", () => {
     await expect(page.getByRole("button", { name: "2 from IE" })).toBeVisible();
 
     await page.screenshot({ path: "e2e/screenshots/map.png", fullPage: true });
+  });
+
+  test("zooming the map spreads the badges without inflating them", async ({
+    page,
+  }) => {
+    await page.goto("./map");
+
+    const badge = page.getByRole("button", { name: "2 from IE" });
+    const other = page.getByRole("button", { name: /from IN$/ });
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+
+    const before = (await badge.boundingBox())!;
+    const gapBefore = (await other.boundingBox())!.x - before.x;
+
+    // Modest, and about the centre, so both badges stay inside the viewBox —
+    // a badge scrolled off the edge would make this assert nothing.
+    const frame = (await map.boundingBox())!;
+    await pinch(map, {
+      x: frame.x + frame.width / 2,
+      y: frame.y + frame.height / 2,
+      factor: 2,
+    });
+
+    await expect(map).not.toHaveAttribute("data-scale", "1.000");
+    const scale = Number(await map.getAttribute("data-scale"));
+    expect(scale).toBeCloseTo(2, 2);
+
+    const after = (await badge.boundingBox())!;
+    const gapAfter = (await other.boundingBox())!.x - after.x;
+
+    // Countries move apart by exactly the zoom factor.
+    expect(gapAfter / gapBefore).toBeCloseTo(scale, 1);
+
+    // And a badge stays exactly the size it was, which is the actual
+    // requirement: magnifying the cluster along with the map separates nothing.
+    expect(after.width).toBeCloseTo(before.width, 1);
+    expect(after.height).toBeCloseTo(before.height, 1);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-zoomed.png",
+      fullPage: true,
+    });
+
+    await page.getByRole("button", { name: "Reset map" }).click();
+    await expect(map).toHaveAttribute("data-scale", "1.000");
+  });
+
+  test("a crowded map can be pinched apart", async ({ page }) => {
+    // The case worth designing for: a party that really does drink its way
+    // around the world ends up with a knot of badges over Europe, where the
+    // countries are small and close. Three fixture pins never show this.
+    await mockApi(page, {
+      tally: [
+        "GB", "IE", "FR", "DE", "NL", "BE", "LU", "CH", "AT", "IT",
+        "ES", "PT", "DK", "NO", "SE", "PL", "CZ", "HU", "SK", "SI",
+        "HR", "BA", "RS", "ME", "AL", "MK", "GR", "US", "JP", "AU",
+      ].map((countryCode, index) => ({
+        countryCode,
+        postCount: (index % 4) + 1,
+      })),
+    });
+
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+
+    // Albania and North Macedonia, measured across every close pair on this
+    // map as the tightest of the lot: 1.63px between centres at rest, needing
+    // 10.35x to separate two 16.8px tap targets. Asserting on the WORST pair is
+    // the point — an easier one would pass at a ceiling that still left this
+    // one untappable, which is exactly the bug James reported on #45.
+    const first = page.getByRole("button", { name: /from AL$/ });
+    const second = page.getByRole("button", { name: /from MK$/ });
+
+    // boundingBox does not wait for the first render; a bare read here raced it.
+    await expect(first).toBeVisible();
+
+    const gap = async () => {
+      const a = (await first.boundingBox())!;
+      const b = (await second.boundingBox())!;
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+
+    // The bar is the tap target, not the drawn circle. Two badges can be
+    // visually distinguishable and still share every pixel you could press,
+    // and "I can see it but I cannot open it" is the same complaint.
+    const target = (await first.boundingBox())!.width;
+
+    // At rest these two overlap: their centres are closer together than one
+    // badge is wide, which is exactly the complaint.
+    const crowded = await gap();
+    expect(crowded).toBeLessThan(target);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-crowded.png",
+      fullPage: true,
+    });
+
+    // Pinch into the knot rather than the middle of the ocean, and address it by
+    // coordinate rather than by locator: at this density a neighbouring badge
+    // sits on top of this one and would intercept anything aimed at it — which
+    // is the strongest statement of the problem. Crowded pins are not merely
+    // hard to read, they are untappable.
+    const knot = (await first.boundingBox())!;
+
+    // Deliberately spread further than the ceiling allows, so this pins the
+    // ceiling itself rather than one gesture's arithmetic.
+    await pinch(map, {
+      x: knot.x + knot.width / 2,
+      y: knot.y + knot.height / 2,
+      factor: 20,
+    });
+    await expect(map).toHaveAttribute("data-scale", MAX_SCALE.toFixed(3));
+
+    // Separated far enough to tap either one — and the badge itself has not
+    // grown while that happened, or nothing would have been gained.
+    expect(await gap()).toBeGreaterThan(target);
+    expect((await first.boundingBox())!.width).toBeCloseTo(target, 1);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-crowded-zoomed.png",
+      fullPage: true,
+    });
   });
 
   test("tapping a map badge opens that country s feed", async ({ page }) => {

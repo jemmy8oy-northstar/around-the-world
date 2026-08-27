@@ -1,3 +1,4 @@
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using AroundTheWorld.Abstractions.Exceptions;
@@ -37,14 +38,35 @@ public class ObjectStoragePhotoStorage(
                 },
                 cancellationToken);
         }
-        catch (AmazonS3Exception exception)
+        catch (AmazonServiceException exception)
         {
             // A failed upload is an upstream failure, not a 500 — the person
             // holding the phone should be told to try again, not shown a crash.
-            throw new UpstreamServiceException("Couldn't save that photo — try again.", exception);
+            throw new UpstreamServiceException(
+                $"Couldn't save that photo — try again. [storage: {Describe(exception)}]", exception);
         }
 
         return key;
+    }
+
+    /// <summary>
+    /// The smallest thing that says which layer refused the upload, carrying no
+    /// credential material: the S3 error code and HTTP status. The code is one of
+    /// a handful of fixed strings and each names a different fix —
+    /// <c>InvalidAccessKeyId</c> and <c>SignatureDoesNotMatch</c> mean the key
+    /// pair, <c>NoSuchBucket</c> the bucket name or region, <c>AccessDenied</c>
+    /// the IAM policy. Without it one sentence covers all four and the only way
+    /// to tell them apart is another deploy — which is what it cost on the night
+    /// before the party (#18). Falls back to the exception type when the SDK
+    /// never reached OCI at all, so a DNS or TLS failure still reads differently.
+    /// </summary>
+    private static string Describe(AmazonServiceException exception)
+    {
+        var code = string.IsNullOrWhiteSpace(exception.ErrorCode)
+            ? exception.GetType().Name
+            : exception.ErrorCode;
+
+        return exception.StatusCode == 0 ? code : $"{code}/{(int)exception.StatusCode}";
     }
 
     /// <summary>

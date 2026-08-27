@@ -13,11 +13,11 @@ public class AuthApiTests
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    private static object Join(string code = "260802", string username = "Dave") =>
+    private static object Join(string? code = null, string username = "Dave") =>
         new { partyCode = code, username };
 
     [Fact]
-    public async Task Join_with_the_right_code_returns_a_token_pair()
+    public async Task Join_with_a_name_alone_returns_a_token_pair()
     {
         using var factory = new GameApiFactory();
         var client = factory.CreateClient();
@@ -34,28 +34,72 @@ public class AuthApiTests
     }
 
     [Fact]
-    public async Task Join_with_the_wrong_code_is_rejected_and_creates_no_user()
+    public async Task Join_ignores_a_code_for_an_ordinary_name()
     {
         using var factory = new GameApiFactory();
         var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/auth/join", Join(code: "000000"));
+        // Nonsense in the field that used to be the gate. It is not read for a
+        // guest, so it cannot lock one out either.
+        var response = await client.PostAsJsonAsync("/api/auth/join", Join(code: "not-the-code"));
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 
-        // A stranger must not be able to squat names without getting in.
+    [Fact]
+    public async Task Join_as_the_host_without_the_code_is_refused_and_creates_no_user()
+    {
+        using var factory = new GameApiFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/join", Join(username: "james"));
+
+        // THE reason the code survived at all. Admin is granted by username, so
+        // an open join would hand the admin panel to whoever typed "james" first.
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+        // And it must not squat the name on the way out, or the real host is
+        // locked out of his own party for the night.
         await factory.WithDbAsync(async db => Assert.Equal(0, await db.Users.CountAsync()));
+    }
+
+    [Theory]
+    [InlineData("JAMES")]
+    [InlineData("  james  ")]
+    public async Task Join_as_the_host_is_refused_however_the_name_is_typed(string username)
+    {
+        using var factory = new GameApiFactory();
+        var client = factory.CreateClient();
+
+        // AdminIdentity and UsernameClaimService must normalise identically, or
+        // "JAMES" walks past the code check and still lands the admin claim.
+        var response = await client.PostAsJsonAsync("/api/auth/join", Join(username: username));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Join_as_the_host_with_the_wrong_code_is_refused()
+    {
+        using var factory = new GameApiFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/join", Join(code: "000000", username: "james"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Theory]
     [InlineData(" 260802 ")]
     [InlineData("260802")]
-    public async Task Join_tolerates_whitespace_around_the_code(string code)
+    public async Task Join_as_the_host_tolerates_whitespace_around_the_code(string code)
     {
         using var factory = new GameApiFactory();
         var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/auth/join", Join(code: code));
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/join", Join(code: code, username: "james"));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

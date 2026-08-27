@@ -3,6 +3,7 @@ import {
   useAdvancePubStopMutation,
   useGetGameStateQuery,
   useReleaseUsernameMutation,
+  useRenameUserMutation,
   useSetShadowBanMutation,
   useStartNewRoundMutation,
   useUpdateCutoversMutation,
@@ -89,8 +90,10 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
   const [updateCutovers] = useUpdateCutoversMutation();
   const [setShadowBan] = useSetShadowBanMutation();
   const [releaseUsername] = useReleaseUsernameMutation();
+  const [renameUser] = useRenameUserMutation();
 
   const [username, setUsername] = useState("");
+  const [newUsername, setNewUsername] = useState("");
   const [goLiveAt, setGoLiveAt] = useState("");
   const [readOnlyAt, setReadOnlyAt] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -266,6 +269,42 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
             }
           >
             Unban
+          </button>
+        </div>
+        <div className="admin__row">
+          <input
+            className="admin__input"
+            value={newUsername}
+            onChange={(e) => setNewUsername(e.target.value)}
+            placeholder="New name"
+            aria-label="New name"
+            autoComplete="off"
+            maxLength={32}
+          />
+          <button
+            className="admin__secondary"
+            type="button"
+            disabled={!username || !newUsername}
+            onClick={() =>
+              run(
+                "Rename",
+                async () => {
+                  const saved = await renameUser({
+                    username,
+                    renameUserRequest: { newUsername },
+                  }).unwrap();
+
+                  // Point the box at the name that now exists, so the next
+                  // action does not 404 against the one that just stopped
+                  // existing. The server trims, so use what it stored.
+                  setUsername(saved);
+                  setNewUsername("");
+                },
+                `Rename "${username}" to "${newUsername}"? They stay logged in and keep their posts.`,
+              )
+            }
+          >
+            Rename
           </button>
         </div>
         <button

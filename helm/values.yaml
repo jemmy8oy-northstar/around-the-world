@@ -7,6 +7,13 @@ ingress:
     - host: balenthiran.co.uk
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Photos are the whole app, and nginx-ingress defaults to a 1MB request body
+    # — so every phone photo was rejected at the proxy with a raw HTML 413 that
+    # the client cannot parse, showing "That didn't send — try again." while the
+    # backend never ran. Kept deliberately ABOVE PhotoStorageOptions.MaxBytes
+    # (8MB) plus the multipart envelope, so the size limit is enforced by the
+    # validator — which can say "keep it under 8MB" — and never by the proxy.
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   tls:
     - hosts:
         - balenthiran.co.uk

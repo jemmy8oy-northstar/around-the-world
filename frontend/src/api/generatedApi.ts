@@ -48,6 +48,12 @@ const injectedRtkApi = api.injectEndpoints({
     >({
       query: () => ({ url: `/api/countries` }),
     }),
+    recordChannelVisit: build.mutation<
+      RecordChannelVisitApiResponse,
+      RecordChannelVisitApiArg
+    >({
+      query: () => ({ url: `/api/me/channel-visit`, method: "POST" }),
+    }),
     advancePubStop: build.mutation<
       AdvancePubStopApiResponse,
       AdvancePubStopApiArg
@@ -96,6 +102,13 @@ const injectedRtkApi = api.injectEndpoints({
         method: "POST",
       }),
     }),
+    renameUser: build.mutation<RenameUserApiResponse, RenameUserApiArg>({
+      query: (queryArg) => ({
+        url: `/api/admin/users/${queryArg.username}/rename`,
+        method: "POST",
+        body: queryArg.renameUserRequest,
+      }),
+    }),
     adminDeletePost: build.mutation<
       AdminDeletePostApiResponse,
       AdminDeletePostApiArg
@@ -141,6 +154,8 @@ export type DeletePostApiArg = {
 };
 export type GetCountryTallyApiResponse = /** status 200 OK */ CountryTally[];
 export type GetCountryTallyApiArg = void;
+export type RecordChannelVisitApiResponse = unknown;
+export type RecordChannelVisitApiArg = void;
 export type AdvancePubStopApiResponse = /** status 200 OK */ number;
 export type AdvancePubStopApiArg = void;
 export type StartNewRoundApiResponse = /** status 200 OK */ number;
@@ -162,6 +177,11 @@ export type ReleaseUsernameApiResponse = unknown;
 export type ReleaseUsernameApiArg = {
   username: string;
 };
+export type RenameUserApiResponse = /** status 200 OK */ string;
+export type RenameUserApiArg = {
+  username: string;
+  renameUserRequest: RenameUserRequest;
+};
 export type AdminDeletePostApiResponse = unknown;
 export type AdminDeletePostApiArg = {
   postId: string;
@@ -174,6 +194,7 @@ export type GameState = {
   currentStopNumber?: number;
   goLiveAt?: string;
   readOnlyAt?: string;
+  youTubeUrl?: string;
 };
 export type ProblemDetails = {
   type?: null | string;
@@ -191,7 +212,7 @@ export type AuthSession = {
   isAdmin?: boolean;
 };
 export type JoinRequest = {
-  partyCode: string;
+  partyCode?: null | string;
   username: string;
 };
 export type RefreshRequest = {
@@ -205,6 +226,7 @@ export type Post = {
   caption: string;
   countryCode: string;
   stopNumber?: number;
+  authorVisitedChannel?: boolean;
   createdAt?: string;
 };
 export type IFormFile = Blob;
@@ -222,6 +244,9 @@ export type UpdateCutoversRequest = {
 export type ShadowBanRequest = {
   isShadowBanned?: boolean;
 };
+export type RenameUserRequest = {
+  newUsername: string;
+};
 export const {
   useGetStatusQuery,
   useGetGameStateQuery,
@@ -231,11 +256,13 @@ export const {
   useCreatePostMutation,
   useDeletePostMutation,
   useGetCountryTallyQuery,
+  useRecordChannelVisitMutation,
   useAdvancePubStopMutation,
   useStartNewRoundMutation,
   useUpdateCutoversMutation,
   useGetShadowBannedUsersQuery,
   useSetShadowBanMutation,
   useReleaseUsernameMutation,
+  useRenameUserMutation,
   useAdminDeletePostMutation,
 } = injectedRtkApi;

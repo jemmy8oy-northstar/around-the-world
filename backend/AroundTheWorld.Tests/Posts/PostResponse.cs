@@ -16,5 +16,7 @@ public sealed class PostResponse
 
     public int StopNumber { get; set; }
 
+    public bool AuthorVisitedChannel { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

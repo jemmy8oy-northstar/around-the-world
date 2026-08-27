@@ -16,4 +16,11 @@ public class GameState : IGameState
     public DateTime GoLiveAt { get; set; }
 
     public DateTime ReadOnlyAt { get; set; }
+
+    /// <summary>
+    /// The birthday plug's link, or empty when it is switched off. It rides on
+    /// this response because the join screen already fetches it anonymously —
+    /// a second anonymous endpoint for one config string would be worse.
+    /// </summary>
+    public string YouTubeUrl { get; set; } = string.Empty;
 }

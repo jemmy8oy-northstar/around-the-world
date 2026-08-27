@@ -1,9 +1,14 @@
 namespace AroundTheWorld.DataModels.Requests;
 
-/// <summary>The whole sign-up: a shared code and a name you pick.</summary>
+/// <summary>The whole sign-up: a name you pick.</summary>
 public class JoinRequest
 {
-    public required string PartyCode { get; set; }
+    /// <summary>
+    /// Optional, and ignored for every name except the host's. It exists so the
+    /// host can claim a name that would otherwise hand the admin panel to whoever
+    /// typed it first.
+    /// </summary>
+    public string? PartyCode { get; set; }
 
     public required string Username { get; set; }
 }

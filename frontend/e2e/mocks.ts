@@ -36,6 +36,8 @@ const POSTS = [
     caption: "Kingfisher, ice cold",
     countryCode: "IN",
     stopNumber: 2,
+    // The one fixture author who took the birthday hint.
+    authorVisitedChannel: true,
     createdAt: "2026-08-26T21:02:00Z",
   },
   {
@@ -73,6 +75,8 @@ export interface MockOptions {
   tally?: typeof TALLY;
   /** Admin-only: who the feed should mark as hidden from everyone else. */
   bannedUsernames?: string[];
+  /** Empty is the server's kill switch for the birthday plug. */
+  youTubeUrl?: string;
 }
 
 export async function mockApi(
@@ -84,6 +88,7 @@ export async function mockApi(
     posts = POSTS,
     tally = TALLY,
     bannedUsernames = [],
+    youTubeUrl = "https://www.youtube.com/@jemmy8oy",
   } = options;
 
   // Registered FIRST, so every specific route below out-ranks it (Playwright
@@ -119,13 +124,42 @@ export async function mockApi(
         currentStopNumber: 2,
         goLiveAt: "2026-08-28T16:00:00Z",
         readOnlyAt: "2026-08-29T04:00:00Z",
+        youTubeUrl,
       },
     }),
   );
 
-  await page.route("**/birthday/api/auth/join", (route) =>
-    route.fulfill({ json: SESSION }),
+  await page.route("**/birthday/api/me/channel-visit", (route) =>
+    route.fulfill({ status: 204, body: "" }),
   );
+
+  // Mirrors the real endpoint rather than always saying yes: a guest joins on a
+  // name alone, and the host's name is refused with 403 until the code comes
+  // with it. A mock that accepted everything would let the join screen drop the
+  // host gate entirely and still pass.
+  await page.route("**/birthday/api/auth/join", (route) => {
+    const body = route.request().postDataJSON() as {
+      username?: string;
+      partyCode?: string | null;
+    };
+    const isHost = (body?.username ?? "").trim().toLowerCase() === "james";
+
+    if (isHost && body?.partyCode?.trim() !== "260802") {
+      return route.fulfill({
+        status: 403,
+        contentType: "application/problem+json",
+        json: {
+          status: 403,
+          title: "Forbidden",
+          detail: "That name is the host's. Enter the host code to claim it.",
+        },
+      });
+    }
+
+    return route.fulfill({
+      json: isHost ? { ...SESSION, username: "james", isAdmin: true } : SESSION,
+    });
+  });
   await page.route("**/birthday/api/auth/refresh", (route) =>
     route.fulfill({ json: SESSION }),
   );
@@ -151,6 +185,13 @@ export async function mockApi(
   await page.route("**/birthday/api/admin/**", (route) =>
     route.fulfill({ status: 200, json: 3 }),
   );
+
+  // The rename route answers with the stored name, not the bare number the
+  // pub-stop catch-all above returns. Registered after it so this one wins.
+  await page.route("**/birthday/api/admin/users/*/rename", (route) => {
+    const body = route.request().postDataJSON() as { newUsername?: string };
+    return route.fulfill({ json: (body?.newUsername ?? "").trim() });
+  });
 
   // Registered after the catch-all, which returns the bare number the pub-stop
   // route answers with — Playwright uses the last matching route, and this one

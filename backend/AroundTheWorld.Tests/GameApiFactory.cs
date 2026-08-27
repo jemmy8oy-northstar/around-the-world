@@ -26,17 +26,26 @@ public sealed class GameApiFactory : WebApplicationFactory<Program>
 
     private readonly string databaseName = Guid.NewGuid().ToString();
     private readonly Action<IServiceCollection>? configureServices;
+    private readonly Action<IDictionary<string, string>>? configureConfiguration;
 
     /// <param name="startAt">
     /// When the booted app believes it is. FakeTimeProvider refuses to move
     /// backwards, so a test that needs an earlier instant sets it here rather than
     /// rewinding later. Defaults to inside the live window of the seeded game.
     /// </param>
+    /// <param name="configureConfiguration">
+    /// Host settings to override before the app builds, keyed the way
+    /// configuration binds them (<c>"Game:YouTubeUrl"</c>). Needed for anything
+    /// read through <c>IOptions</c> rather than the database — those cannot be
+    /// swapped after the fact from <paramref name="configureServices"/>.
+    /// </param>
     public GameApiFactory(
         Action<IServiceCollection>? configureServices = null,
-        DateTimeOffset? startAt = null)
+        DateTimeOffset? startAt = null,
+        Action<IDictionary<string, string>>? configureConfiguration = null)
     {
         this.configureServices = configureServices;
+        this.configureConfiguration = configureConfiguration;
         Clock = new FakeTimeProvider(startAt ?? new DateTimeOffset(2026, 8, 28, 20, 0, 0, TimeSpan.Zero));
     }
 
@@ -61,6 +70,17 @@ public sealed class GameApiFactory : WebApplicationFactory<Program>
         builder.UseSetting(
             "PhotoStorage:LocalRootPath",
             Path.Combine(Path.GetTempPath(), $"atw-test-{Guid.NewGuid():N}"));
+
+        if (configureConfiguration is not null)
+        {
+            var overrides = new Dictionary<string, string>();
+            configureConfiguration(overrides);
+
+            foreach (var (key, value) in overrides)
+            {
+                builder.UseSetting(key, value);
+            }
+        }
 
         builder.ConfigureServices(services =>
         {

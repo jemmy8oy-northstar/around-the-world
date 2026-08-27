@@ -92,6 +92,7 @@ app.MapGroup("/api")
     .MapPhotoRoutes()
     .MapPostRoutes()
     .MapCountryRoutes()
+    .MapMeRoutes()
     .MapAdminRoutes()
     .WithOpenApi();
 

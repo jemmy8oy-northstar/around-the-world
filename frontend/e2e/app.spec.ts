@@ -279,8 +279,8 @@ test.describe("the app", () => {
     await mockApi(page, {
       tally: [
         "GB", "IE", "FR", "DE", "NL", "BE", "LU", "CH", "AT", "IT",
-        "ES", "PT", "DK", "NO", "SE", "PL", "CZ", "HU", "GR", "HR",
-        "US", "MX", "BR", "AR", "JP", "IN", "AU", "ZA", "KE", "TH",
+        "ES", "PT", "DK", "NO", "SE", "PL", "CZ", "HU", "SK", "SI",
+        "HR", "BA", "RS", "ME", "AL", "MK", "GR", "US", "JP", "AU",
       ].map((countryCode, index) => ({
         countryCode,
         postCount: (index % 4) + 1,
@@ -290,19 +290,28 @@ test.describe("the app", () => {
     await page.goto("./map");
 
     const map = page.getByRole("img", { name: "World map of drinks by country" });
-    const nl = page.getByRole("button", { name: /from NL$/ });
-    const be = page.getByRole("button", { name: /from BE$/ });
+
+    // Albania and North Macedonia, measured across every close pair on this
+    // map as the tightest of the lot: 1.63px between centres at rest, needing
+    // 10.35x to separate two 16.8px tap targets. Asserting on the WORST pair is
+    // the point — an easier one would pass at a ceiling that still left this
+    // one untappable, which is exactly the bug James reported on #45.
+    const first = page.getByRole("button", { name: /from AL$/ });
+    const second = page.getByRole("button", { name: /from MK$/ });
+
+    // boundingBox does not wait for the first render; a bare read here raced it.
+    await expect(first).toBeVisible();
 
     const gap = async () => {
-      const a = (await nl.boundingBox())!;
-      const b = (await be.boundingBox())!;
+      const a = (await first.boundingBox())!;
+      const b = (await second.boundingBox())!;
       return Math.hypot(a.x - b.x, a.y - b.y);
     };
 
     // The bar is the tap target, not the drawn circle. Two badges can be
     // visually distinguishable and still share every pixel you could press,
     // and "I can see it but I cannot open it" is the same complaint.
-    const target = (await nl.boundingBox())!.width;
+    const target = (await first.boundingBox())!.width;
 
     // At rest these two overlap: their centres are closer together than one
     // badge is wide, which is exactly the complaint.
@@ -314,12 +323,12 @@ test.describe("the app", () => {
       fullPage: true,
     });
 
-    // Pinch into the knot rather than the middle of the ocean. Moved by
-    // coordinate rather than .hover(), because at this density a neighbouring
-    // badge sits on top of NL and intercepts the pointer — which is the
-    // strongest statement of the problem: crowded pins are not merely hard to
-    // read, they are untappable.
-    const knot = (await nl.boundingBox())!;
+    // Pinch into the knot rather than the middle of the ocean, and address it by
+    // coordinate rather than by locator: at this density a neighbouring badge
+    // sits on top of this one and would intercept anything aimed at it — which
+    // is the strongest statement of the problem. Crowded pins are not merely
+    // hard to read, they are untappable.
+    const knot = (await first.boundingBox())!;
 
     // Deliberately spread further than the ceiling allows, so this pins the
     // ceiling itself rather than one gesture's arithmetic.
@@ -333,7 +342,7 @@ test.describe("the app", () => {
     // Separated far enough to tap either one — and the badge itself has not
     // grown while that happened, or nothing would have been gained.
     expect(await gap()).toBeGreaterThan(target);
-    expect((await nl.boundingBox())!.width).toBeCloseTo(target, 1);
+    expect((await first.boundingBox())!.width).toBeCloseTo(target, 1);
 
     await page.screenshot({
       path: "e2e/screenshots/map-crowded-zoomed.png",

@@ -20,13 +20,17 @@ export const IDENTITY: ZoomTransform = { k: 1, x: 0, y: 0 };
  * 1 is the floor because the map is fitted to the viewBox at k=1 — zooming out
  * past it would only add empty gutters.
  *
- * The ceiling is measured, not chosen. The tightest pair a pub crawl plausibly
- * produces is the Netherlands and Belgium, whose badge centres sit 2.10px apart
- * at rest on an iPhone 13. A badge's tap target is 16.8px across, so pulling
- * those two apart far enough to hit either one individually needs 8.03x — which
- * an earlier ceiling of 8 missed by a whisker, separating them visually while
- * leaving them still impossible to tap. 12 clears it with room for a tighter
- * pair, and the land underneath is vector, so it stays crisp.
+ * The ceiling is measured, not chosen — against every close pair in the Balkans
+ * and Benelux, not the first one that came to mind. A badge's tap target is
+ * 16.8px across on an iPhone 13, and the worst pairs at rest are:
+ *
+ *   AL/MK 1.63px (needs 10.35x)   BE/LU 1.69px (9.98x)   HR/BA 1.81px (9.30x)
+ *   HU/SK 1.84px (9.16x)          AT/SI 1.92px (8.78x)   NL/BE 2.10px (8.03x)
+ *
+ * So a ceiling of 8 — where this started, sized against NL/BE alone — left six
+ * further pairs permanently untappable, including the Albania/Montenegro case
+ * James reported on #45. 12 clears every one of them with headroom, and the land
+ * underneath is vector, so it stays crisp. Re-measure before lowering it.
  */
 export const MIN_SCALE = 1;
 export const MAX_SCALE = 12;

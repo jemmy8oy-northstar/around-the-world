@@ -1,3 +1,5 @@
+using System.Net;
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using AroundTheWorld.Abstractions.Exceptions;
@@ -42,6 +44,54 @@ public class ObjectStoragePhotoStorageTests
             .Throws(new AmazonS3Exception("bucket is gone"));
 
         // Not a 500: the person holding the phone should be told to try again.
+        await Assert.ThrowsAsync<UpstreamServiceException>(
+            () => Storage(Configured()).SaveAsync(new MemoryStream([1]), "image/jpeg"));
+    }
+
+    [Theory]
+    [InlineData("InvalidAccessKeyId", HttpStatusCode.Forbidden, "InvalidAccessKeyId/403")]
+    [InlineData("SignatureDoesNotMatch", HttpStatusCode.Forbidden, "SignatureDoesNotMatch/403")]
+    [InlineData("NoSuchBucket", HttpStatusCode.NotFound, "NoSuchBucket/404")]
+    public async Task SaveAsync_names_which_layer_refused_the_upload(
+        string errorCode, HttpStatusCode status, string expected)
+    {
+        s3Client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+            .Throws(new AmazonS3Exception("denied") { ErrorCode = errorCode, StatusCode = status });
+
+        var exception = await Assert.ThrowsAsync<UpstreamServiceException>(
+            () => Storage(Configured()).SaveAsync(new MemoryStream([1]), "image/jpeg"));
+
+        // Bad keys, a missing bucket and an IAM refusal are one sentence apart
+        // otherwise, and telling them apart used to cost a whole deploy (#18).
+        Assert.Contains(expected, exception.Message);
+
+        // Still readable by a guest holding a phone at a party.
+        Assert.StartsWith("Couldn't save that photo — try again.", exception.Message);
+    }
+
+    [Fact]
+    public async Task SaveAsync_falls_back_to_the_exception_type_when_it_never_reached_oci()
+    {
+        // No ErrorCode and no status: DNS, TLS or a socket failure, which must
+        // not read the same as a credential rejection.
+        s3Client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+            .Throws(new AmazonS3Exception("connection refused"));
+
+        var exception = await Assert.ThrowsAsync<UpstreamServiceException>(
+            () => Storage(Configured()).SaveAsync(new MemoryStream([1]), "image/jpeg"));
+
+        Assert.Contains("AmazonS3Exception", exception.Message);
+    }
+
+    [Fact]
+    public async Task SaveAsync_also_catches_non_s3_sdk_failures()
+    {
+        // AmazonServiceException is the base the SDK throws for credential
+        // resolution and endpoint errors; those used to escape as a bare 500
+        // saying "an unexpected error occurred", which names nothing.
+        s3Client.PutObjectAsync(Arg.Any<PutObjectRequest>(), Arg.Any<CancellationToken>())
+            .Throws(new AmazonServiceException("no credentials"));
+
         await Assert.ThrowsAsync<UpstreamServiceException>(
             () => Storage(Configured()).SaveAsync(new MemoryStream([1]), "image/jpeg"));
     }

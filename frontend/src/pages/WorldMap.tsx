@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGetCountryTallyQuery } from "../api/atwApi";
 import { WorldMapSvg } from "../components/WorldMapSvg";
@@ -7,6 +8,12 @@ import "./WorldMap.css";
 export default function WorldMap() {
   const navigate = useNavigate();
   const { data: tally, isLoading } = useGetCountryTallyQuery();
+
+  // The page owns the free height between the banner and the tab bar, so the
+  // page is what tells the map how far it may grow. The map cannot work this
+  // out for itself: it is absolutely positioned, so its containing block is its
+  // own resting footprint and says nothing about the room around it.
+  const page = useRef<HTMLDivElement>(null);
 
   if (isLoading)
     return (
@@ -19,10 +26,11 @@ export default function WorldMap() {
   }));
 
   return (
-    <div className="worldmap-page">
+    <div className="worldmap-page" ref={page}>
       <div className="worldmap-page__canvas">
         <WorldMapSvg
           badges={badges}
+          bounds={page}
           onSelect={(code) => navigate(`/country/${code}`)}
         />
       </div>

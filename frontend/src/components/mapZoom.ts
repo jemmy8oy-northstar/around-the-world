@@ -54,20 +54,69 @@ export const SCALE_RUBBER = 1.4;
 export const EDGE_SLACK = 0.1;
 
 /**
- * The map grows taller as it is zoomed, up to this multiple of its resting
+ * The map grows taller as it is zoomed, up to some multiple of its resting
  * height — James's "it staying in the same horizontal box feels like a missed
  * opportunity. It could expand into the vertical space available."
  *
- * Below this multiple the growth alone does the magnifying: at k=1.8 the box is
- * 1.8x taller and still shows the world's full height, so the first stretch of
- * the gesture buys screen area instead of cropping the top and bottom off the
- * world. Past it the box holds still and the zoom becomes an ordinary one.
+ * While the box is still growing, the growth alone does the magnifying: at k=2
+ * the box is 2x taller and still shows the world's full height, so that stretch
+ * of the gesture buys screen area instead of cropping the top and bottom off
+ * the world. Past the multiple the box holds still and the zoom becomes an
+ * ordinary, cropping one.
  *
- * The invariant that makes this safe: the box's height is HEIGHT * min(k, ...),
- * which is never more than HEIGHT * k, the height of the land at that scale. So
- * the land always covers the box and growth can never open a gutter.
+ * This constant is only the fallback for a map that has not been told what
+ * space it has (see `growthBudget`). It was picked by eye, and picking it by eye
+ * is what James was looking at on #52: on an iPhone the page has room for about
+ * 2.7x the map's resting height, so a fixed 1.8 stopped growing with a third of
+ * the page still empty and started cropping the world instead — "map still more
+ * cropped than it needs to be". Measure the space; don't guess it.
  */
 export const HEIGHT_GROWTH = 1.8;
+
+/**
+ * How many times its resting height the map may grow, given the height the page
+ * actually has for it. `available` and `resting` are CSS pixels of the same
+ * element — the ratio is what carries over into viewBox units.
+ *
+ * Never below 1: a page too short for even the resting map must not shrink it,
+ * because at k=1 the whole world is on screen and shrinking would crop it. An
+ * unmeasurable page (zero height, before layout) falls back to the constant.
+ */
+export function growthBudget(available: number, resting: number): number {
+  if (!(available > 0) || !(resting > 0)) return HEIGHT_GROWTH;
+
+  return Math.max(1, available / resting);
+}
+
+/**
+ * How far the grown map has to move to stay inside the space it was given.
+ *
+ * The map grows about its own centre, and that centre is not the centre of the
+ * page's free space — the hint line below the map pushes it up. So a box grown
+ * to the full budget would hang over the top of that space (in practice, into
+ * the game banner) while leaving a gap at the bottom. This is the correction,
+ * in the same pixels: positive moves it down.
+ *
+ * If the box is somehow taller than the space, it is centred in it rather than
+ * pinned to one edge — an overflow that is symmetric reads as "this is as big
+ * as it gets", where one pinned edge reads as a layout bug.
+ */
+export function growthShift(
+  centre: number,
+  height: number,
+  top: number,
+  bottom: number,
+): number {
+  if (height >= bottom - top) return (top + bottom) / 2 - centre;
+
+  const over = top - (centre - height / 2);
+  const under = centre + height / 2 - bottom;
+
+  if (over > 0) return over;
+  if (under > 0) return -under;
+
+  return 0;
+}
 
 /** How long the spring back to a settled transform takes, in milliseconds. */
 export const SETTLE_MS = 260;
@@ -87,10 +136,10 @@ export function apply(transform: ZoomTransform, [px, py]: Point): [number, numbe
  * `width: 100%; height: auto` — at a given scale. Clamped at the bottom so that
  * a gesture stretching below k=1 shrinks the map inside a box that stays put,
  * rather than shrinking the box with it and hiding the very overshoot the spring
- * back exists to show.
+ * back exists to show. Clamped at the top by the space the page has for it.
  */
-export function viewBoxHeight(k: number): number {
-  return HEIGHT * clamp(k, 1, HEIGHT_GROWTH);
+export function viewBoxHeight(k: number, growth: number = HEIGHT_GROWTH): number {
+  return HEIGHT * clamp(k, 1, Math.max(1, growth));
 }
 
 /**
@@ -153,8 +202,9 @@ function clampAxis(
 export function clampToBounds(
   transform: ZoomTransform,
   slack = 0,
+  growth: number = HEIGHT_GROWTH,
 ): ZoomTransform {
-  const window = viewBoxHeight(transform.k);
+  const window = viewBoxHeight(transform.k, growth);
 
   return {
     k: transform.k,
@@ -167,30 +217,44 @@ export function clampToBounds(
  * The transform a gesture in progress is allowed to reach: stretched past the
  * limits, but not unboundedly.
  */
-export function stretch(transform: ZoomTransform): ZoomTransform {
+export function stretch(
+  transform: ZoomTransform,
+  growth: number = HEIGHT_GROWTH,
+): ZoomTransform {
   return clampToBounds(
     {
       ...transform,
       k: clamp(transform.k, MIN_SCALE / SCALE_RUBBER, MAX_SCALE * SCALE_RUBBER),
     },
     EDGE_SLACK,
+    growth,
   );
 }
 
 /** The transform a released gesture springs back to. */
-export function settle(transform: ZoomTransform): ZoomTransform {
-  return clampToBounds({
-    ...transform,
-    k: clamp(transform.k, MIN_SCALE, MAX_SCALE),
-  });
+export function settle(
+  transform: ZoomTransform,
+  growth: number = HEIGHT_GROWTH,
+): ZoomTransform {
+  return clampToBounds(
+    {
+      ...transform,
+      k: clamp(transform.k, MIN_SCALE, MAX_SCALE),
+    },
+    0,
+    growth,
+  );
 }
 
 /** True once a transform has settled anywhere other than at rest. */
 export const isZoomed = (transform: ZoomTransform) => transform.k > MIN_SCALE;
 
 /** Whether a transform is already where `settle` would put it. */
-export function isSettled(transform: ZoomTransform): boolean {
-  const target = settle(transform);
+export function isSettled(
+  transform: ZoomTransform,
+  growth: number = HEIGHT_GROWTH,
+): boolean {
+  const target = settle(transform, growth);
 
   return (
     Math.abs(target.k - transform.k) < 1e-6 &&

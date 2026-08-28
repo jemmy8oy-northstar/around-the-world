@@ -231,16 +231,36 @@ export function stretch(
   );
 }
 
-/** The transform a released gesture springs back to. */
+/**
+ * The transform a released gesture springs back to.
+ *
+ * The scale is walked back to the ceiling *about the middle of the screen*,
+ * not simply overwritten. Overwriting it is what James reported on #45 — "when
+ * you zoom too far it pulls you to the bottom right corner of the map" — and
+ * the pull is not occasional, it is arithmetic: a point sits at `(p - x) / k`
+ * in map space, so holding `x` while shrinking `k` moves every visible point
+ * further out along both axes at once, and `x` is negative on a zoomed map, so
+ * "further out" is always east and always south. Measured in a browser, an
+ * over-pinch held dead centre showed map point (400, 187) — the middle of the
+ * world — and sprang back showing (560, 262).
+ *
+ * Zooming about the centre instead keeps whatever you were looking at where
+ * you were looking at it, which is the same promise `zoomAbout` makes to the
+ * fingers during the gesture. The spring back is the tail of that gesture and
+ * should not break it.
+ */
 export function settle(
   transform: ZoomTransform,
   growth: number = HEIGHT_GROWTH,
 ): ZoomTransform {
+  const k = clamp(transform.k, MIN_SCALE, MAX_SCALE);
+
+  // The window the user is looking at *now* — the box has not sprung back yet,
+  // so measuring it at the settled scale would anchor on a frame nobody saw.
+  const window = viewBoxHeight(transform.k, growth);
+
   return clampToBounds(
-    {
-      ...transform,
-      k: clamp(transform.k, MIN_SCALE, MAX_SCALE),
-    },
+    zoomAbout(transform, k / transform.k, [WIDTH / 2, window / 2]),
     0,
     growth,
   );

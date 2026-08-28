@@ -1,8 +1,28 @@
 .worldmap-page {
-  /* Centres the map in whatever height is left between the banner and the tab
-     bar. A world map is inherently wide, so on a portrait phone it can never
-     fill the viewport — top-aligning it just left a large void underneath. */
-  min-height: calc(100dvh - 12rem);
+  /* Fills whatever height is left between the banner and the tab bar. A world
+     map is inherently wide, so on a portrait phone it can never fill the
+     viewport — top-aligning it just left a large void underneath.
+
+     This used to be `calc(100dvh - 12rem)`, and 12rem was a guess at the
+     chrome above and below. Measured on an iPhone 13 the banner is 71px and
+     the tab bar 68.2px — 8.7rem, not 12 — so the guess told the map it had
+     472px of a real 524.8px and kept 52.8px of the page permanently out of
+     reach. That is the band of empty page James photographed on #45 ("also
+     doesn't quite fill space still"), and it survived #56 because #56 fixed
+     the map to measure its container while the container went on guessing.
+
+     Grow into .shell__main instead: it already ends exactly where the tab bar
+     begins (its padding-bottom reserves it), so its height is the answer and
+     nothing here has to know what the chrome is made of. Nothing to re-tune
+     when the banner gains a line or the home indicator changes size.
+
+     `flex: 1` rather than `min-height: 100%` — measured, not assumed. .shell
+     is `min-height: 100dvh` (it must be, so a long feed can scroll past it),
+     which leaves .shell__main's own height indefinite, and a percentage
+     against an indefinite height silently resolves to auto: 216px, worse than
+     the guess it replaced. Growing into the free space needs no definite
+     height to point at. */
+  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;

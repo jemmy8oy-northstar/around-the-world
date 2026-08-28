@@ -62,6 +62,7 @@ async function pinchGradually(
     factor,
     steps = 30,
     drift = 0,
+    release = true,
   }: {
     x: number;
     y: number;
@@ -69,9 +70,15 @@ async function pinchGradually(
     steps?: number;
     /** Client pixels the whole hand slides right over the gesture. */
     drift?: number;
+    /**
+     * Whether to lift the fingers at the end. Leave them down to inspect the
+     * map mid-gesture — past the rubber band's limits, where it is only
+     * allowed to be until it is released.
+     */
+    release?: boolean;
   },
 ): Promise<void> {
-  await target.evaluate((element, { x, y, factor, steps, drift }) => {
+  await target.evaluate((element, { x, y, factor, steps, drift, release }) => {
     const fire = (type: string, touches: { clientX: number; clientY: number }[]) => {
       const event = new Event(type, { bubbles: true, cancelable: true });
       Object.defineProperty(event, "touches", { value: touches });
@@ -91,8 +98,43 @@ async function pinchGradually(
       fire("touchmove", spread(60 * factor ** (step / steps), (drift * step) / steps));
     }
 
-    fire("touchend", []);
-  }, { x, y, factor, steps, drift });
+    if (release) fire("touchend", []);
+  }, { x, y, factor, steps, drift, release });
+}
+
+/** Lifts fingers left down by `pinchGradually({ release: false })`. */
+async function releaseFingers(target: Locator): Promise<void> {
+  await target.evaluate((element) => {
+    const event = new Event("touchend", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "touches", { value: [] });
+    element.dispatchEvent(event);
+  });
+}
+
+/**
+ * The point in the map's own coordinate space currently sitting under the
+ * middle of the map on screen — i.e. what you are looking at.
+ *
+ * Read out of the DOM the component actually renders (the land group's
+ * transform and the svg's viewBox) rather than from any test-only hook, so it
+ * cannot agree with the component by construction.
+ */
+async function lookingAt(target: Locator): Promise<{ x: number; y: number }> {
+  return target.evaluate((svg) => {
+    const land = svg.querySelector("g.worldmap__land")!;
+    const transform = land.getAttribute("transform") ?? "";
+    const move = transform.match(/translate\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
+    const scale = transform.match(/scale\(\s*([-\d.]+)\s*\)/);
+    const k = scale ? Number(scale[1]) : 1;
+    const boxHeight = Number(
+      (svg.getAttribute("viewBox") ?? "0 0 800 380").split(/\s+/)[3],
+    );
+
+    return {
+      x: (400 - (move ? Number(move[1]) : 0)) / k,
+      y: (boxHeight / 2 - (move ? Number(move[2]) : 0)) / k,
+    };
+  });
 }
 
 /**
@@ -474,6 +516,66 @@ test.describe("the app", () => {
     // And the map has come with the hand, roughly pixel for pixel.
     expect(drifted - still).toBeGreaterThan(DRIFT * 0.7);
     expect(drifted - still).toBeLessThan(DRIFT * 1.3);
+  });
+
+  test("an over-pinch springs back to what you were looking at", async ({
+    page,
+  }) => {
+    // James, #45: "when you zoom too far it pulls you to the bottom right
+    // corner of the map". Past the ceiling the gesture is allowed to stretch
+    // and then springs back — and the spring back used to overwrite the scale
+    // while holding the offsets, which slides every visible point east and
+    // south at once. Measured before the fix: the middle of the world went in
+    // at (400, 187) and came back out at (560, 262).
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+    const frame = (await map.boundingBox())!;
+    const centre = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
+
+    // Well past MAX_SCALE, so the release has real work to do.
+    await pinchGradually(map, { ...centre, factor: MAX_SCALE * 3, release: false });
+
+    const stretched = Number(await map.getAttribute("data-scale"));
+    expect(stretched).toBeGreaterThan(MAX_SCALE);
+    const before = await lookingAt(map);
+
+    await releaseFingers(map);
+    await expect(map).toHaveAttribute("data-scale", MAX_SCALE.toFixed(3));
+
+    const after = await lookingAt(map);
+
+    // A couple of map units of slack for the spring's final frame; the bug
+    // this pins was 160 units east and 75 south.
+    expect(after.x).toBeCloseTo(before.x, 0);
+    expect(after.y).toBeCloseTo(before.y, 0);
+  });
+
+  test("the map's page reaches the tab bar", async ({ page }) => {
+    // The map may only grow into the height its page reports (#52), so a page
+    // that under-reports its own height caps the map below what the screen
+    // has. It used to claim `calc(100dvh - 12rem)` — a guess at the chrome —
+    // where the banner and tab bar together measure 8.7rem, leaving 52.8px of
+    // the screen permanently unreachable. That is the empty band James
+    // photographed on #45 *after* #52 shipped, which is why the assertion is
+    // on the page box rather than on the map: the map was already obeying it.
+    await page.goto("./map");
+    await expect(
+      page.getByRole("img", { name: "World map of drinks by country" }),
+    ).toBeVisible();
+
+    const region = (await page.locator(".worldmap-page").boundingBox())!;
+    const banner = (await page.locator(".banner").boundingBox())!;
+    const tabs = (await page.locator(".tabbar").boundingBox())!;
+
+    const free = tabs.y - (banner.y + banner.height);
+    const unreachable = free - region.height;
+
+    // Some clearance above the tab bar is deliberate (the shell reserves a
+    // little more than the bar is tall). Anything beyond that is a guess that
+    // has drifted from the thing it was guessing at.
+    expect(unreachable).toBeGreaterThanOrEqual(0);
+    expect(unreachable).toBeLessThan(20);
   });
 
   test("the map grows into the space below it instead of shoving it down", async ({

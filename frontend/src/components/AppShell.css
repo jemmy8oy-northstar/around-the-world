@@ -7,6 +7,15 @@
 .shell__main {
   flex: 1;
 
+  /* A column so a page can ask to fill the height rather than compute it. The
+     map is the one that needs it (WorldMap.css): it is the only page whose
+     content has no natural size and should take whatever is going. Every
+     other page renders a single block child, which lays out the same stretched
+     across a column as it did in flow — the change buys the map its height
+     without moving anything else. */
+  display: flex;
+  flex-direction: column;
+
   /* Leaves room for the fixed tab bar plus the iOS home indicator. */
   padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }

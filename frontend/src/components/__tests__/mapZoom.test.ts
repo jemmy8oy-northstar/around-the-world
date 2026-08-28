@@ -371,6 +371,39 @@ describe("stretch and settle", () => {
     expect(isSettled({ k: 3, x: 200, y: 0 })).toBe(false);
   });
 
+  it("springs back about the middle of the screen, not the origin", () => {
+    // James, #45: "when you zoom too far it pulls you to the bottom right
+    // corner of the map". Over-pinch to the top of the rubber band with the
+    // middle of the world under the middle of the screen, and check it is
+    // still there once the scale has been walked back to the ceiling.
+    const growth = 2.89; // an iPhone 13's measured budget, 513px / 177.6px
+    const overshot = MAX_SCALE * SCALE_RUBBER;
+    const window = viewBoxHeight(overshot, growth);
+    const centre = [WIDTH / 2, window / 2] as const;
+
+    /** The map point currently under the middle of the screen. */
+    const under = (t: typeof stretched) => [
+      (centre[0] - t.x) / t.k,
+      (viewBoxHeight(t.k, growth) / 2 - t.y) / t.k,
+    ];
+
+    const stretched = {
+      k: overshot,
+      x: centre[0] - (WIDTH / 2) * overshot,
+      y: centre[1] - (HEIGHT / 2) * overshot,
+    };
+
+    expect(under(stretched)).toEqual([WIDTH / 2, HEIGHT / 2]);
+
+    const settled = settle(stretched, growth);
+
+    expect(settled.k).toBe(MAX_SCALE);
+    // Both axes, because the old behaviour — hold x and y, overwrite k — moved
+    // the view east AND south at once. Holding only one would still drift.
+    expect(under(settled)[0]).toBeCloseTo(WIDTH / 2, 6);
+    expect(under(settled)[1]).toBeCloseTo(HEIGHT / 2, 6);
+  });
+
   it("settles anything stretch can produce, in one step", () => {
     // Belt and braces on the pair: whatever a gesture reaches, one settle has
     // to land somewhere isSettled agrees with, or the spring back would leave

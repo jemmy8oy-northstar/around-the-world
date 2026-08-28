@@ -11,6 +11,8 @@ import {
   apply,
   clampToBounds,
   easeOut,
+  growthBudget,
+  growthShift,
   isSettled,
   isZoomed,
   lerp,
@@ -151,6 +153,142 @@ describe("viewBoxHeight", () => {
       expect(height).toBeGreaterThanOrEqual(previous);
       previous = height;
     }
+  });
+});
+
+/**
+ * Measured on an iPhone 13 (390x844) against the real page, not assumed: the
+ * map's resting footprint is 177.64 CSS px inside 472 px of free page between
+ * the game banner and the tab bar, and the resting map's middle sits 216.8 px
+ * down that space — above its middle, because the hint line below the map
+ * shares the space with it. Every number in this block comes from that
+ * measurement; they are what makes these tests about James's phone rather than
+ * about arithmetic.
+ */
+const PHONE = { available: 472, resting: 177.64, centre: 216.8 };
+
+describe("growthBudget", () => {
+  it("is the room the page actually has, not a guess", () => {
+    expect(growthBudget(PHONE.available, PHONE.resting)).toBeCloseTo(2.657, 3);
+  });
+
+  it("gives James's phone a third more map than the fixed multiple did", () => {
+    // The defect he reported on #52 — "map still more cropped than it needs to
+    // be". HEIGHT_GROWTH was picked by eye, and on his phone it stopped the box
+    // growing at 1.8x with 152px of page still empty, cropping the world
+    // instead of using the space. This is the assertion that goes red if
+    // anyone puts the constant back.
+    const budget = growthBudget(PHONE.available, PHONE.resting);
+    const drawn = (growth: number) => PHONE.resting * growth;
+
+    expect(drawn(budget)).toBeCloseTo(PHONE.available, 6);
+    expect(drawn(HEIGHT_GROWTH)).toBeCloseTo(319.75, 2);
+    expect(drawn(budget) - drawn(HEIGHT_GROWTH)).toBeGreaterThan(150);
+  });
+
+  it("never shrinks a map that does not fit", () => {
+    // At k=1 the whole world is on screen, so a page too short for the resting
+    // map must leave it alone: shrinking the box below its own height is the
+    // one move that crops the world at rest, which is worse than overflowing.
+    expect(growthBudget(120, PHONE.resting)).toBe(1);
+    expect(growthBudget(PHONE.resting, PHONE.resting)).toBe(1);
+  });
+
+  it("falls back to the constant when there is nothing to measure", () => {
+    // Before layout both boxes are zero. Treating that as "no room" would pin
+    // the map to k=1 on the first frame and undo the growth entirely.
+    expect(growthBudget(0, 0)).toBe(HEIGHT_GROWTH);
+    expect(growthBudget(0, PHONE.resting)).toBe(HEIGHT_GROWTH);
+    expect(growthBudget(PHONE.available, 0)).toBe(HEIGHT_GROWTH);
+    expect(growthBudget(Number.NaN, PHONE.resting)).toBe(HEIGHT_GROWTH);
+  });
+});
+
+describe("growthShift", () => {
+  it("puts a fully grown map exactly inside the space it was given", () => {
+    // The measured case: at the full budget the box is the height of the space,
+    // so it has to move down by the gap between its own centre and the space's.
+    // Without this the map grows about a centre 19px above the middle and
+    // overhangs the game banner while leaving a gap at the tab bar.
+    const shift = growthShift(PHONE.centre, PHONE.available, 0, PHONE.available);
+
+    expect(shift).toBeCloseTo(19.2, 1);
+    expect(PHONE.centre + shift - PHONE.available / 2).toBeCloseTo(0, 6);
+  });
+
+  it("leaves a map that already fits where it is", () => {
+    // Mid-gesture the box is smaller than the space and still inside it. Moving
+    // it then would slide the map under the fingers.
+    expect(growthShift(PHONE.centre, PHONE.resting, 0, PHONE.available)).toBe(0);
+    expect(growthShift(PHONE.centre, 300, 0, PHONE.available)).toBe(0);
+  });
+
+  it("pushes back in from whichever edge it has run out of room at", () => {
+    // Growing about its own centre, the top edge runs out first here; a map
+    // whose centre sat low would run out at the bottom, and the correction has
+    // to point the other way.
+    expect(growthShift(100, 260, 0, 472)).toBe(30);
+    expect(growthShift(400, 260, 0, 472)).toBe(-58);
+  });
+
+  it("centres a box too tall for the space rather than pinning an edge", () => {
+    const shift = growthShift(PHONE.centre, 600, 0, PHONE.available);
+
+    expect(PHONE.centre + shift - 300).toBeCloseTo(
+      PHONE.available / 2 - 300,
+      6,
+    );
+  });
+});
+
+describe("viewBoxHeight with a measured budget", () => {
+  it("grows to the budget instead of the constant", () => {
+    const budget = growthBudget(PHONE.available, PHONE.resting);
+
+    expect(viewBoxHeight(MAX_SCALE, budget)).toBeCloseTo(HEIGHT * budget, 6);
+    expect(viewBoxHeight(MAX_SCALE, budget)).toBeGreaterThan(
+      viewBoxHeight(MAX_SCALE),
+    );
+  });
+
+  it("keeps the no-gutter invariant at any budget", () => {
+    // The invariant the feature rests on, re-checked now that the ceiling is a
+    // runtime number rather than a constant someone reviewed once: the box is
+    // never taller than the land at that scale, so no offset can open a band of
+    // empty page inside the map.
+    for (const growth of [1, 1.8, 2.657, 4, 40]) {
+      for (let k = MIN_SCALE; k <= MAX_SCALE * SCALE_RUBBER; k += 0.05) {
+        expect(viewBoxHeight(k, growth)).toBeLessThanOrEqual(HEIGHT * k + 1e-9);
+      }
+    }
+  });
+
+  it("refuses a budget that would shrink the box below the map", () => {
+    // growthBudget already floors at 1, but viewBoxHeight is called with a ref
+    // that starts life elsewhere, so it floors too. A budget under 1 here would
+    // crop the world at rest.
+    expect(viewBoxHeight(1, 0.5)).toBe(HEIGHT);
+    expect(viewBoxHeight(3, 0.5)).toBe(HEIGHT);
+  });
+
+  it("carries the budget through the clamps that use it", () => {
+    // stretch/settle/clampToBounds all size their window from viewBoxHeight, so
+    // a budget that stopped at the top of the call chain would leave the map
+    // drawn tall and clamped short — the land sliding inside its own box.
+    const budget = growthBudget(PHONE.available, PHONE.resting);
+    const window = viewBoxHeight(2.4, budget);
+
+    expect(clampToBounds({ k: 2.4, x: 0, y: -9999 }, 0, budget).y).toBeCloseTo(
+      window - HEIGHT * 2.4,
+      6,
+    );
+    expect(settle({ k: 2.4, x: 0, y: -9999 }, budget).y).toBeCloseTo(
+      window - HEIGHT * 2.4,
+      6,
+    );
+    expect(isSettled(settle({ k: 2.4, x: 0, y: -9999 }, budget), budget)).toBe(
+      true,
+    );
   });
 });
 

@@ -2,8 +2,9 @@
   position: relative;
 
   /* The footprint the map occupies in the page, held at its RESTING shape. The
-     map itself grows taller as it is zoomed (viewBoxHeight in mapZoom.ts) and
-     is taken out of flow below, so that growth spills over the text underneath
+     map itself grows taller as it is zoomed — up to the page's whole free
+     height, measured (growthBudget in mapZoom.ts) rather than assumed — and is
+     taken out of flow below, so that growth spills over the text underneath
      instead of shoving it down the page mid-pinch. Reflowing on every frame of
      a gesture is the kind of movement that makes a zoom feel unsteady, and
      James asked for the map to sit "z axis above the text directly below it"
@@ -25,7 +26,14 @@
      centres its content in the height left between the banner and the tab bar,
      so a box that only ever grew down would walk the map off that centre and
      into the tab bar as it was zoomed. Expanding both ways keeps it where the
-     eye already is. */
+     eye already is.
+
+     The component adds a correction to this translate inline (growthShift in
+     mapZoom.ts): the resting map is not quite in the middle of the page's free
+     height, because the hint line below shares that height with it, so a box
+     grown to fill the page would overhang the top. The correction slides it
+     back inside — the map still grows about its own centre, it just stops
+     centring on it once one edge has run out of room. */
   inset-block-start: 50%;
   translate: 0 -50%;
 

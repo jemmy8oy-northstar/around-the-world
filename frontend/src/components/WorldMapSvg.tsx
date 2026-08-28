@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { geoNaturalEarth1, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import type { FeatureCollection, Geometry } from "geojson";
@@ -7,6 +14,7 @@ import topology from "../data/world-110m.json";
 import { findCountry } from "../countries/countries";
 import {
   HEIGHT,
+  HEIGHT_GROWTH,
   IDENTITY,
   MAX_SCALE,
   MIN_SCALE,
@@ -15,6 +23,8 @@ import {
   WIDTH,
   apply,
   easeOut,
+  growthBudget,
+  growthShift,
   isSettled,
   isZoomed,
   lerp,
@@ -76,11 +86,19 @@ export interface CountryBadge {
 export function WorldMapSvg({
   badges,
   onSelect,
+  bounds,
 }: {
   badges: CountryBadge[];
   onSelect: (countryCode: string) => void;
+  /**
+   * The element whose height the map is allowed to grow into. Without it the
+   * map falls back to the fixed HEIGHT_GROWTH multiple, which is a guess — and
+   * a guess that stopped a third of the way down James's phone (#52).
+   */
+  bounds?: RefObject<HTMLElement | null>;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const footprintRef = useRef<HTMLDivElement>(null);
   const live = useRef<ZoomTransform>(IDENTITY);
   const [transform, setTransform] = useState<ZoomTransform>(IDENTITY);
 
@@ -88,6 +106,54 @@ export function WorldMapSvg({
     live.current = next;
     setTransform(next);
   }, []);
+
+  /**
+   * The page's real geometry, in CSS pixels, remeasured whenever it changes —
+   * an orientation flip halves it, and the number is a property of the device,
+   * not of the app. `centre` is where the resting map's middle sits inside the
+   * space, which is above its middle because the hint line below the map
+   * shares the page with it.
+   */
+  const [space, setSpace] = useState({ available: 0, resting: 0, centre: 0 });
+  const growth = useRef(HEIGHT_GROWTH);
+
+  useEffect(() => {
+    const footprint = footprintRef.current;
+    const container = bounds?.current;
+    if (!footprint) return;
+
+    const measure = () => {
+      const box = footprint.getBoundingClientRect();
+      const outer = container?.getBoundingClientRect();
+
+      const next = {
+        available: outer?.height ?? 0,
+        resting: box.height,
+        centre: outer ? box.top + box.height / 2 - outer.top : 0,
+      };
+
+      setSpace((current) =>
+        current.available === next.available &&
+        current.resting === next.resting &&
+        current.centre === next.centre
+          ? current
+          : next,
+      );
+    };
+
+    measure();
+
+    // The map is absolutely positioned, so growing it cannot change either box
+    // — no feedback loop. Both are observed because the footprint's width (and
+    // so its height) and the page's height change independently.
+    const observer = new ResizeObserver(measure);
+    observer.observe(footprint);
+    if (container) observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [bounds]);
+
+  growth.current = growthBudget(space.available, space.resting);
 
   const { landPaths, projection } = useMemo(() => {
     const topo = topology as unknown as Topology;
@@ -141,9 +207,17 @@ export function WorldMapSvg({
 
     return [
       ((clientX - rect.left) / rect.width) * WIDTH,
-      ((clientY - rect.top) / rect.height) * viewBoxHeight(live.current.k),
+      ((clientY - rect.top) / rect.height) *
+        viewBoxHeight(live.current.k, growth.current),
     ];
   }, []);
+
+  // The space can change under a zoomed map — an orientation flip is the
+  // ordinary case. Re-settling keeps the land covering the box; without it a
+  // rotation can leave the old offset showing a band of empty page.
+  useEffect(() => {
+    if (isZoomed(live.current)) write(settle(live.current, growth.current));
+  }, [space, write]);
 
   // Spring back to a settled transform when a gesture lets go past the limits.
   const frame = useRef<number | null>(null);
@@ -199,6 +273,7 @@ export function WorldMapSvg({
             Math.exp(-event.deltaY * 0.002),
             toViewBox(event.clientX, event.clientY),
           ),
+          growth.current,
         ),
       );
     };
@@ -253,7 +328,12 @@ export function WorldMapSvg({
         );
         const to = toViewBox(mid[0], mid[1]);
 
-        write(stretch(panBy(zoomed, to[0] - from[0], to[1] - from[1])));
+        write(
+          stretch(
+            panBy(zoomed, to[0] - from[0], to[1] - from[1]),
+            growth.current,
+          ),
+        );
         return;
       }
 
@@ -282,6 +362,7 @@ export function WorldMapSvg({
               (clientX - lastX) * ratio,
               (clientY - lastY) * ratio,
             ),
+            growth.current,
           ),
         );
       }
@@ -300,7 +381,8 @@ export function WorldMapSvg({
       pinch.current = null;
       lastPan.current = null;
 
-      if (!isSettled(live.current)) springTo(settle(live.current));
+      if (!isSettled(live.current, growth.current))
+        springTo(settle(live.current, growth.current));
     };
 
     // Non-passive on purpose: preventDefault is what stops iOS Safari zooming
@@ -336,14 +418,31 @@ export function WorldMapSvg({
     onSelect(countryCode);
   };
 
-  const boxHeight = viewBoxHeight(transform.k);
+  const boxHeight = viewBoxHeight(transform.k, growth.current);
+
+  /**
+   * Where the grown box has to sit to stay inside the space, in CSS pixels.
+   * Derived from numbers measured once per layout rather than from a fresh
+   * getBoundingClientRect, because this is recomputed on every frame of a
+   * gesture and reading layout there would be both slow and a render late.
+   */
+  const measured = space.available > 0 && space.resting > 0;
+  const drawnHeight = space.resting * (boxHeight / HEIGHT);
+  const shift = measured
+    ? growthShift(space.centre, drawnHeight, 0, space.available)
+    : 0;
 
   return (
-    <div className="worldmap-zoom">
+    <div className="worldmap-zoom" ref={footprintRef}>
       <svg
         ref={svgRef}
         className="worldmap"
         viewBox={`0 0 ${WIDTH} ${boxHeight}`}
+        style={
+          measured
+            ? { translate: `0 calc(-50% + ${shift.toFixed(2)}px)` }
+            : undefined
+        }
         role="img"
         aria-label="World map of drinks by country"
         data-scale={transform.k.toFixed(3)}
@@ -391,6 +490,17 @@ export function WorldMapSvg({
         <button
           type="button"
           className="worldmap__reset"
+          // Rides the top edge of the map as it grows, rather than the top edge
+          // of the footprint the map has long since outgrown — which is how it
+          // ends up floating in the middle of the Atlantic.
+          style={
+            measured
+              ? {
+                  insetBlockStart: "50%",
+                  translate: `0 calc(${(shift - drawnHeight / 2).toFixed(2)}px + var(--space-2))`,
+                }
+              : undefined
+          }
           onClick={reset}
         >
           Reset map

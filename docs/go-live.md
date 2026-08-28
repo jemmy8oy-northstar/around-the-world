@@ -202,7 +202,7 @@ generic line — so it looked like the bucket.
 
 | What they see | What is actually wrong |
 |---|---|
-| "Couldn't save that photo — try again." | **Object storage.** Wrong bucket name, or a bad S3 key pair. |
+| "Couldn't save that photo — try again. **[storage: X/N]**" | **Object storage**, and the bracket names which part — read it down the phone. `AccessDenied` → the IAM policy. `NoSuchBucket` → the bucket name, namespace or region. `InvalidAccessKeyId` / `SignatureDoesNotMatch` → the key pair. Anything else → my code, and I want to know. (This is the suffix that solved 27 Aug in one retry: it was `NotImplemented/501`, a checksum header OCI does not support.) |
 | "That photo is too big — keep it under 8MB." | Genuinely a huge photo. The app said this, so everything upstream is fine. |
 | "That photo is too big to send — try a smaller one." | The **ingress** rejected it (413) before the app ran. `nginx.ingress.kubernetes.io/proxy-body-size` in `helm/values.yaml` is `10m` and must stay above the app's 8MB limit. |
 | "You've been signed out — join again." | Their token expired, or `Jwt__Secret` changed (a pod restart with no secret set regenerates it). |
@@ -237,6 +237,43 @@ So clear the round before go-live. If you find test photos in the live feed
 afterwards, the way back is on the same page: push **"Go live"** forward a few
 minutes, which returns the game to Practice and brings the button back. Deleting
 the posts one at a time from the feed also works.
+
+## 8b. Moving the group to the next pub
+
+The one control you will actually use all night: **Admin → 🍺 Next pub**. Unlike
+"New round" it is always on the page, in Practice and in Live. The current stop
+is in the line above it — `Live · <round name> · Stop 3` — and every photo posted
+from that moment lands under that stop in the feed.
+
+**Nothing else moves it.** It is a column on the active round row in the
+database, so it survives a pod restart, a redeploy, and the Practice → Live flip
+at 17:00 (the mode is worked out from the clock, never stored). The one thing
+that *does* reset it is **"New round"**, which starts stop 1 again — which is why
+§8a comes first: **clear the round, then start advancing.** Do it the other way
+round and you lose the stop you were on.
+
+### It will ask you a question if you tap twice
+
+There is **no undo**. Nothing moves the stop backwards, and the only way to
+correct a mis-tap is a new round, which archives everybody's photos. So a second
+tap within **five minutes** is refused and turned into a question, in the server's
+own words:
+
+> You moved to stop 3 four minutes ago. Move on to stop 4 anyway?
+
+- **OK** → it moves. The guard costs you a tap, never the evening.
+- **Cancel** → the screen says *"Next pub — left where it was"* and nothing changed.
+
+It **asks rather than blocks** on purpose: being stranded at the wrong stop
+mid-crawl with no way through would be worse than the double-tap it prevents. A
+genuine double-tap still cannot get past it — the second tap opens the dialog,
+and the dialog swallows the taps after it.
+
+Anything else the button says is a real failure and worth reading. *"There is no
+round in progress."* means there is no active round to move — you need **"New
+round"**, and once you are Live that button is hidden (`Admin.tsx:119`), so the
+route back is the one in §8a: push **"Go live"** forward a few minutes, which
+returns the game to Practice and brings the button back.
 
 ---
 

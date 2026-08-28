@@ -520,6 +520,61 @@ test.describe("the app", () => {
     expect((await map.boundingBox())!.height).toBeCloseTo(restingMap.height, 0);
   });
 
+  test("the grown map uses the whole page and none of anyone else's", async ({
+    page,
+  }) => {
+    // James on #52, looking at a zoomed map with a third of his phone empty
+    // above and below it: "Map still more cropped than it needs to be". The
+    // ceiling was a constant picked by eye (1.8x), so the box stopped growing
+    // while there was room left and started cropping the world instead. It is
+    // now measured from the page, which is the only thing that knows.
+    await page.goto("./map");
+
+    const map = page.getByRole("img", { name: "World map of drinks by country" });
+    const space = page.locator(".worldmap-page");
+    await expect(map).toBeVisible();
+
+    const room = (await space.boundingBox())!;
+    const resting = (await map.boundingBox())!;
+
+    await pinchGradually(map, {
+      x: resting.x + resting.width / 2,
+      y: resting.y + resting.height / 2,
+      factor: 6,
+    });
+
+    const grown = (await map.boundingBox())!;
+
+    // Fills the free height between the game banner and the tab bar, and stops
+    // there. Both edges, not just the total: growing about its own centre from
+    // a resting position that is not the centre of that space overhangs the
+    // banner by as much as it leaves empty at the bottom, which reads as the
+    // map having escaped rather than expanded.
+    expect(grown.height).toBeCloseTo(room.height, 0);
+    expect(grown.y).toBeCloseTo(room.y, 0);
+    expect(grown.y + grown.height).toBeCloseTo(room.y + room.height, 0);
+
+    // And this is the bit he was looking at: strictly more than the old fixed
+    // multiple would ever have given him. Red against HEIGHT_GROWTH = 1.8.
+    expect(grown.height).toBeGreaterThan(resting.height * 1.8 + 20);
+
+    // The reset button rides the map's own top edge, not the footprint the map
+    // has long since grown out of — otherwise it floats mid-Atlantic.
+    const reset = page.getByRole("button", { name: "Reset map" });
+    const resetBox = (await reset.boundingBox())!;
+    expect(resetBox.y).toBeGreaterThanOrEqual(grown.y);
+    expect(resetBox.y).toBeLessThan(grown.y + grown.height / 4);
+
+    await page.screenshot({
+      path: "e2e/screenshots/map-fills-the-page.png",
+      fullPage: true,
+    });
+
+    await reset.click();
+    await expect(map).toHaveAttribute("data-scale", "1.000");
+    expect((await map.boundingBox())!.height).toBeCloseTo(resting.height, 0);
+  });
+
   test("a pinch stretched past the limit springs back to it", async ({ page }) => {
     // James, #45: "allow the image to zoom out of its confines then if it's too
     // zoomed out it just snaps back to the max zoom out view". The point is the

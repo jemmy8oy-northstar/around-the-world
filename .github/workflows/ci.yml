@@ -71,6 +71,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      # `npm run test` is `vitest run` — the non-watch form, which exits.
+      # These 13 files (146 tests) existed for weeks with no job invoking them (#37): the
+      # e2e suite mocks the API, so image compression, token storage and the
+      # refresh mutex have no other gate on a pull request.
+      - name: Unit tests
+        run: npm run test
+
   e2e:
     runs-on: ubuntu-latest
     defaults:

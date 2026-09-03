@@ -40,18 +40,12 @@ vi.mock("../../api/atwApi", () => ({
   useRenameUserMutation: () => [renameUser],
 }));
 
-// eslint-disable-next-line import/first
 import Admin from "../Admin";
 
 const ADMIN_KEY_STORAGE = "atw.adminKey";
 
-/** A mutation trigger: `fn(args).unwrap()` resolves. */
-const resolves = (value: unknown = undefined) =>
-  vi.fn(() => ({ unwrap: () => Promise.resolve(value) }));
-
-/** A mutation trigger whose `.unwrap()` rejects with `error`. */
-const rejects = (error: unknown) =>
-  vi.fn(() => ({ unwrap: () => Promise.reject(error) }));
+/** What an RTK Query mutation trigger returns: something with `.unwrap()`. */
+const resolving = (value?: unknown) => () => ({ unwrap: () => Promise.resolve(value) });
 
 function session(overrides: Partial<StoredSession> = {}): StoredSession {
   return {
@@ -82,16 +76,15 @@ function renderAdmin(current: StoredSession | null = null) {
 beforeEach(() => {
   window.sessionStorage.clear();
   gameState.mockReturnValue({ data: { mode: "Practice", roundName: "R", currentStopNumber: 1 } });
-  for (const fn of [advanceStop, startRound, updateCutovers, setShadowBan, releaseUsername, renameUser]) {
+  for (const fn of [advanceStop, startRound, updateCutovers, setShadowBan, releaseUsername]) {
     fn.mockReset();
-    fn.mockReturnValue(resolves()());
+    fn.mockImplementation(resolving());
   }
-  advanceStop.mockImplementation(() => ({ unwrap: () => Promise.resolve() }));
-  startRound.mockImplementation(() => ({ unwrap: () => Promise.resolve() }));
-  updateCutovers.mockImplementation(() => ({ unwrap: () => Promise.resolve() }));
-  setShadowBan.mockImplementation(() => ({ unwrap: () => Promise.resolve() }));
-  releaseUsername.mockImplementation(() => ({ unwrap: () => Promise.resolve() }));
-  renameUser.mockImplementation(() => ({ unwrap: () => Promise.resolve("Dave") }));
+  // The rename trigger resolves to the name the server stored, which is the
+  // whole point of the assertion in "points the box at the name the SERVER
+  // stored" — a bare undefined here would blank the box and pass it by accident.
+  renameUser.mockReset();
+  renameUser.mockImplementation(resolving("Dave"));
 });
 
 afterEach(() => {

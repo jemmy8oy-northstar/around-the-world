@@ -109,14 +109,20 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
 
   // Resetting the round archives everyone's photos. In Practice that is the
   // point — it is how the build week's test posts get cleared before the real
-  // thing. From go-live onwards it is only ever a mis-tap in a dark pub, so it
-  // is not rendered at all: James asked for it to disappear rather than sit
-  // behind a disclosure, and a control you cannot see cannot be fat-fingered.
+  // thing. It used to be hidden from go-live onwards, on the reasoning that a
+  // control you cannot see cannot be fat-fingered, with "push Go live forward
+  // to get back to Practice" as the escape hatch.
   //
-  // The way back, if the night ever genuinely needs one: push "Go live" forward
-  // on this same page, which returns the game to Practice and brings the button
-  // back. So the escape hatch is here, not in a curl command.
-  const roundResetVisible = game?.mode === "Practice";
+  // The real night proved that wrong (#61): the game went live still holding
+  // the build week's posts and sitting on stop 2, and the one control that
+  // fixes both was the one that had just disappeared. Three taps of indirection
+  // is too far away with a room full of people waiting.
+  //
+  // So it is always rendered now, and the fat-finger guard moved into the
+  // confirmation instead: past go-live the dialog says LIVE and names what it
+  // destroys. That is the same guard the Next pub cooldown relies on — a modal
+  // swallows the second tap of a double-tap rather than answering itself.
+  const roundResetIsLive = !!game && game.mode !== "Practice";
 
   async function run(
     label: string,
@@ -210,21 +216,21 @@ function AdminPanel({ onLock }: { onLock: (() => void) | null }) {
         >
           🍺 Next pub
         </button>
-        {roundResetVisible && (
-          <button
-            className="admin__danger"
-            type="button"
-            onClick={() =>
-              run(
-                "New round",
-                () => startRound({ startRoundRequest: {} }).unwrap(),
-                "Start a new round? The current feed is archived and everyone starts fresh.",
-              )
-            }
-          >
-            Start a new round
-          </button>
-        )}
+        <button
+          className="admin__danger"
+          type="button"
+          onClick={() =>
+            run(
+              "New round",
+              () => startRound({ startRoundRequest: {} }).unwrap(),
+              roundResetIsLive
+                ? "You are LIVE. Starting a new round archives every photo posted so far and puts the group back to Stop 1. There is no undo. Do it?"
+                : "Start a new round? The current feed is archived and everyone starts fresh.",
+            )
+          }
+        >
+          Start a new round
+        </button>
       </section>
 
       <section className="admin__section">

@@ -229,20 +229,27 @@ Reach for the right lever:
 
 Step 6.4 has you post a test photo and step 7 asks you to do it on the 27th —
 those posts are in the feed your guests will see. Clearing them is one button,
-**Admin → "New round"**, but it is rendered **only while the game is in
-Practice** (`Admin.tsx:119`) — deliberately, so it can't be fat-fingered in a
-dark pub. At 17:00 it disappears.
+**Admin → "New round"**, and it is on the page **in Practice and in Live**.
 
-So clear the round before go-live. If you find test photos in the live feed
-afterwards, the way back is on the same page: push **"Go live"** forward a few
-minutes, which returns the game to Practice and brings the button back. Deleting
-the posts one at a time from the feed also works.
+Still clear the round before go-live if you can — it is one less thing at 17:00,
+and it also puts you back on stop 1 (see §8b). But if test photos are already in
+the live feed, just tap it: past go-live the confirmation says **LIVE**, names
+that every photo so far is archived and the group goes back to stop 1, and asks
+you to mean it. Deleting the posts one at a time from the feed also works if you
+only want to lose a couple and keep the stop you are on.
+
+> This button used to disappear at 17:00, so it could not be fat-fingered in a
+> dark pub, with "push **Go live** forward a few minutes to get back to
+> Practice" as the way back. On the real night (#61) the game went live still
+> holding the build week's posts *and* sitting on stop 2, and the one control
+> that fixes both had just vanished. Three taps of indirection was too far away
+> with a room full of people waiting, so the guard moved into the wording of the
+> confirmation instead.
 
 ## 8b. Moving the group to the next pub
 
-The one control you will actually use all night: **Admin → 🍺 Next pub**. Unlike
-"New round" it is always on the page, in Practice and in Live. The current stop
-is in the line above it — `Live · <round name> · Stop 3` — and every photo posted
+The one control you will actually use all night: **Admin → 🍺 Next pub**. The
+current stop is in the line above it — `Live · <round name> · Stop 3` — and every photo posted
 from that moment lands under that stop in the feed.
 
 **Nothing else moves it.** It is a column on the active round row in the
@@ -270,10 +277,8 @@ genuine double-tap still cannot get past it — the second tap opens the dialog,
 and the dialog swallows the taps after it.
 
 Anything else the button says is a real failure and worth reading. *"There is no
-round in progress."* means there is no active round to move — you need **"New
-round"**, and once you are Live that button is hidden (`Admin.tsx:119`), so the
-route back is the one in §8a: push **"Go live"** forward a few minutes, which
-returns the game to Practice and brings the button back.
+round in progress."* means there is no active round to move — tap **"New round"**,
+which is right there under it whatever mode you are in (§8a).
 
 ---
 

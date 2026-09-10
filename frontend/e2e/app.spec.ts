@@ -943,11 +943,11 @@ test.describe("admin", () => {
     await expect(
       page.getByRole("button", { name: "🍺 Next pub" }),
     ).toBeVisible();
-    // The mocked game is Live, so the round reset is not on the page at all.
-    // This assertion used to name "Start a new round" directly.
+    // The mocked game is Live, and since #61 the round reset is on the page in
+    // Live too — the night it was needed was the night it had disappeared.
     await expect(
-      page.getByRole("button", { name: /new round/i }),
-    ).toHaveCount(0);
+      page.getByRole("button", { name: "Start a new round" }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Release name/ }),
     ).toBeVisible();
@@ -1189,36 +1189,52 @@ test.describe("the admin", () => {
     });
   });
 
-  test("removes the round reset entirely once the game is live", async ({
+  test("keeps the round reset reachable once the game is live, behind a dialog that says LIVE", async ({
     page,
   }) => {
+    // The mocked game is Live. #61: the game went live still holding the build
+    // week's posts and sitting on stop 2, and the one control that fixes both
+    // had disappeared at exactly that moment. So it stays on the page — and the
+    // fat-finger guard it used to get from being invisible now has to come from
+    // the confirmation.
     await page.goto("./admin");
 
-    // Matched loosely on purpose: the point is that no control anywhere on the
-    // page can start a round, not that one particular label is absent. A
-    // disclosure-shaped replacement ("Danger zone" → "Yes, start a new round")
-    // passes an exact-label assertion while leaving the reset one tap away.
-    await expect(page.getByRole("button", { name: /new round/i })).toHaveCount(
-      0,
-    );
-    await expect(page.getByRole("button", { name: /danger/i })).toHaveCount(0);
+    let asked: string | null = null;
+    page.once("dialog", (dialog) => {
+      asked = dialog.message();
+      return dialog.dismiss();
+    });
 
-    // The rest of the panel is untouched — "disappears" must not mean the
-    // section it lived in stopped rendering.
-    await expect(
-      page.getByRole("button", { name: "🍺 Next pub" }),
-    ).toBeVisible();
+    await page.getByRole("button", { name: "Start a new round" }).click();
+    await expect.poll(() => asked).not.toBeNull();
+
+    // Not a cosmetic wording check. In a dark pub the only thing standing
+    // between a mis-tap and archiving everybody's photos is that this sentence
+    // reads differently from the harmless build-week one.
+    expect(asked).toContain("LIVE");
+    expect(asked).toContain("no undo");
+
+    // Dismissed, so nothing was started: the stop is still where it was.
+    await expect(page.locator(".admin__status")).toContainText("Stop");
+    await expect(page.locator(".admin__message")).toHaveCount(0);
   });
 
-  test("offers the round reset while still in practice", async ({ page }) => {
-    // The control for the test above: hiding it must not make it unreachable
-    // during the build week, which is when it is actually used — and it is also
-    // the way back if the night ever needs one (push "Go live" forward).
+  test("asks the mild question while still in practice", async ({ page }) => {
+    // The control for the test above. During the build week this reset is
+    // routine — if it shouted LIVE here too, the LIVE wording would stop
+    // meaning anything and the guard would be back to nothing.
     await mockApi(page, { mode: "Practice" });
     await page.goto("./admin");
 
-    await expect(
-      page.getByRole("button", { name: "Start a new round" }),
-    ).toBeVisible();
+    let asked: string | null = null;
+    page.once("dialog", (dialog) => {
+      asked = dialog.message();
+      return dialog.dismiss();
+    });
+
+    await page.getByRole("button", { name: "Start a new round" }).click();
+    await expect.poll(() => asked).not.toBeNull();
+
+    expect(asked).not.toContain("LIVE");
   });
 });
